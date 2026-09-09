@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import Link from 'next/link';
+
 import {
   ArrowUpRight,
   ArrowRight,
@@ -21,12 +21,12 @@ export const DEFAULT_CONTENT = {
 };
 export function Brand() {
   return (
-    <Link href="/" className="brand" aria-label="Blue Star Barns home">
+    <a href="/" className="brand" aria-label="Blue Star Barns home">
       <Star fill="currentColor" size={28} />
       <span>
         Blue Star Barns<small>COFFEE & BIKES · SAUGATUCK, MI</small>
       </span>
-    </Link>
+    </a>
   );
 }
 export function Header() {
@@ -38,19 +38,19 @@ export function Header() {
         className={open ? 'public-nav is-open' : 'public-nav'}
         aria-label="Main"
       >
-        <Link onClick={() => setOpen(false)} href="/#bikes">
+        <a onClick={() => setOpen(false)} href="/#bikes">
           Bikes
-        </Link>
-        <Link onClick={() => setOpen(false)} href="/#coffee">
+        </a>
+        <a onClick={() => setOpen(false)} href="/#coffee">
           Coffee
-        </Link>
-        <Link onClick={() => setOpen(false)} href="/#visit">
+        </a>
+        <a onClick={() => setOpen(false)} href="/#visit">
           Visit
-        </Link>
+        </a>
       </nav>
-      <Link href="/rent" className="button header-cta">
+      <a href="/rent" className="button header-cta">
         Reserve a bike <ArrowUpRight size={18} />
-      </Link>
+      </a>
       <button
         className="menu-toggle"
         onClick={() => setOpen(!open)}
@@ -137,9 +137,9 @@ export function Home({
               then explore on two wheels.
             </p>
             <div className="actions">
-              <Link className="button" href="/rent">
+              <a className="button" href="/rent">
                 Reserve a bike <ArrowUpRight size={20} />
-              </Link>
+              </a>
               <a className="text-link" href="#coffee">
                 Explore the coffee menu <ArrowRight size={16} />
               </a>
@@ -208,7 +208,7 @@ export function Home({
                 sizes: 'Medium / Large',
               },
             ].map((b, i) => (
-              <Link
+              <a
                 href={'/rent?category=' + b.cat}
                 key={b.cat}
                 className="bike-card"
@@ -227,7 +227,7 @@ export function Home({
                     <strong>${rates[i]}</strong>
                   </div>
                 </div>
-              </Link>
+              </a>
             ))}
           </div>
           <p className="micro">
@@ -339,9 +339,9 @@ export function Footer() {
       </div>
       <div className="wrap footer-bottom">
         <span>COFFEE. BIKES. A GOOD DAY OUT.</span>
-        <Link href="/rent">Bikes</Link>
-        <Link href="/#coffee">Coffee</Link>
-        <Link href="/#visit">Visit</Link>
+        <a href="/rent">Bikes</a>
+        <a href="/#coffee">Coffee</a>
+        <a href="/#visit">Visit</a>
       </div>
     </footer>
   );

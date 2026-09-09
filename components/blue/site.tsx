@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+
+import { usePathname, useSearchParams } from 'next/navigation';
 import { RotateCcw, Star, ArrowUpRight } from 'lucide-react';
 import { Home, Brand, QuickBook, Footer } from './home';
 import { DemoProvider, useDemo } from './store';
@@ -28,7 +28,7 @@ function Surface() {
   const { state, transact, reset } = useDemo();
   const path = usePathname();
   const query = useSearchParams();
-  const router = useRouter();
+
   const [confirm, setConfirm] = useState(false);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -92,7 +92,7 @@ function Surface() {
         execute(input: unknown) {
           const slot = validate(input);
           const rows = availability(stateRef.current, slot);
-          router.push(
+          window.location.assign(
             '/rent?' +
               new URLSearchParams({ ...slot, source: 'Website' }).toString(),
           );
@@ -111,7 +111,7 @@ function Surface() {
       } catch {}
     }
     return () => lifecycle.abort();
-  }, [router]);
+  }, []);
   return (
     <>
       <a className="skip-link" href="#main">
@@ -126,21 +126,21 @@ function Surface() {
           <Star size={13} /> REVIEW THE EXAMPLE
         </span>
         <nav aria-label="Reviewer">
-          <Link aria-current={path === '/' ? 'page' : undefined} href="/">
+          <a aria-current={path === '/' ? 'page' : undefined} href="/">
             Customer site
-          </Link>
-          <Link
+          </a>
+          <a
             aria-current={path === '/staff-demo' ? 'page' : undefined}
             href="/staff-demo"
           >
             Staff demo
-          </Link>
-          <Link
+          </a>
+          <a
             aria-current={path === '/partner-demo' ? 'page' : undefined}
             href="/partner-demo"
           >
             Partner demo
-          </Link>
+          </a>
         </nav>
         <Choice
           label="Payment preview"
@@ -191,7 +191,7 @@ function Surface() {
               onClick={() => {
                 reset();
                 setConfirm(false);
-                router.push('/');
+                window.location.assign('/');
               }}
               className="button"
             >
@@ -226,12 +226,12 @@ function Partner() {
             <p className="eyebrow">01 · BOOKING LINK</p>
             <Brand />
             <p>Head to Blue Star Barns to choose your ride.</p>
-            <Link
+            <a
               className="button"
               href="/rent?source=Example%20lodging%20partner"
             >
               Reserve bikes at Blue Star Barns <ArrowUpRight size={18} />
-            </Link>
+            </a>
           </section>
           <section className="panel">
             <p className="eyebrow">02 · COMPACT BOOKING WIDGET</p>
@@ -241,12 +241,12 @@ function Partner() {
               Same sample fleet and calendar. This is an in-page widget example;
               a cross-domain embed is not active.
             </p>
-            <Link
+            <a
               className="text-link"
               href="/rent?source=Example%20lodging%20partner"
             >
               Open booking page instead <ArrowUpRight size={16} />
-            </Link>
+            </a>
           </section>
         </div>
       </main>

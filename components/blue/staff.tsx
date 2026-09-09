@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+
 import { useSearchParams } from 'next/navigation';
 import {
   Bike,
@@ -114,12 +114,12 @@ export function Staff() {
     <SidebarProvider className="staff-shell">
       <Sidebar collapsible="none" className="staff-sidebar">
         <SidebarHeader>
-          <Link className="staff-brand" href="/">
+          <a className="staff-brand" href="/">
             <Star fill="currentColor" size={25} />
             <span>
               Blue Star Barns<small>THE BIKE DESK</small>
             </span>
-          </Link>
+          </a>
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
@@ -143,9 +143,9 @@ export function Staff() {
             <br />
             Fictional data · this browser session
           </p>
-          <Link href="/">
+          <a href="/">
             View customer site <ArrowUpRight size={16} />
-          </Link>
+          </a>
         </SidebarFooter>
       </Sidebar>
       <main id="main" className="staff-main">
@@ -160,9 +160,9 @@ export function Staff() {
             </p>
           </div>
           {['today', 'reservations'].includes(tab) && (
-            <Link href="/rent?source=Walk-in" className="button">
+            <a href="/rent?source=Walk-in" className="button">
               <Plus size={19} /> Add a walk-in
-            </Link>
+            </a>
           )}
           {tab === 'bikes' && (
             <button className="button" onClick={() => setBikeEditor('new')}>
@@ -1066,9 +1066,9 @@ function ContentForm() {
       {saved && (
         <p className="success" role="status">
           Website content saved.{' '}
-          <Link className="text-link" href="/">
+          <a className="text-link" href="/">
             View the homepage
-          </Link>
+          </a>
         </p>
       )}
       <TextArea

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+
+import { useSearchParams } from 'next/navigation';
 import {
   ArrowRight,
   ArrowLeft,
@@ -274,7 +274,7 @@ export function Summary({
 export function Rental() {
   const { state, transact } = useDemo();
   const params = useSearchParams();
-  const router = useRouter();
+
   const [slot, setSlot] = useState<Slot>(() => ({
     date: params.get('date') || dayPlus(1),
     time: params.get('time') || '10:00',
@@ -341,7 +341,7 @@ export function Rental() {
         (s) => createBooking(s, slot, lines, contact, source, mode, paid).id,
       );
       setCheckout(false);
-      router.push('/reservation/' + id);
+      window.location.assign('/reservation/' + id);
     } catch (e) {
       setError((e as Error).message);
       setCheckout(false);
@@ -651,9 +651,9 @@ export function Confirmation({ id }: { id: string }) {
             This demo reservation isn’t in this browser session. A reset or a
             new day starts a fresh sample fleet.
           </p>
-          <Link className="button" href="/rent">
+          <a className="button" href="/rent">
             Choose a ride
-          </Link>
+          </a>
         </main>
       </>
     );
@@ -721,12 +721,12 @@ export function Confirmation({ id }: { id: string }) {
             <button className="button" onClick={() => setEmail(true)}>
               <Mail size={18} /> View confirmation email preview
             </button>
-            <Link className="button outline" href="/">
+            <a className="button outline" href="/">
               Back to website <ArrowRight size={18} />
-            </Link>
-            <Link className="text-link" href={'/staff-demo?booking=' + b.id}>
+            </a>
+            <a className="text-link" href={'/staff-demo?booking=' + b.id}>
               Review this reservation in staff demo <ArrowUpRightSafe />
-            </Link>
+            </a>
           </div>
         </div>
       </main>
