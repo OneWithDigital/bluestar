@@ -40,7 +40,7 @@ Use the reviewer bar to switch views, preview full payment or a sample 20% booki
 - Cancellation and no-show immediately release demo inventory; refund status is a separate action. Final cancellation/no-show rules remain a business decision.
 - Staff demo is deliberately open inside the private review Site. It has no independent staff authentication, roles, audit security or production database.
 - The partner widget is an in-page layout and referral demonstration. A real cross-domain embed, commission accounting and partner payouts are not implemented.
-- The supplied Blue Star Barns bird-and-handlebars logo appears in the customer header, footer, partner page and staff sidebar. Its original JPEG is included in the source. The generated lifestyle photo is illustrative, not an actual property or product photo. Category cards use neutral bicycle icons rather than claims about actual models.
+- The supplied bird-and-handlebars logo appears in the customer header and partner page. The supplied business-card chainring logo appears on the homepage photo, footer and staff sidebar. Both original JPEGs are included unchanged in the source. The palette explores charcoal, warm cream, teal, orange and yellow from the business card; teal is darkened for readable links and staff controls. The generated lifestyle photo is illustrative, not an actual property or product photo. Category cards use neutral bicycle icons rather than claims about actual models.
 - The Visit section intentionally leaves coffee hours and bike hours separate and unconfirmed.
 - The source uses the current Sites/Vinext Worker build. It is not a ready-to-upload Hostinger production package.
 

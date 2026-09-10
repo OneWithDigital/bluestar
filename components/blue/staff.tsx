@@ -116,10 +116,10 @@ export function Staff() {
           <a className="staff-brand" href="/" aria-label="Blue Star Barns home">
             <img
               className="brand-logo"
-              src="/blue-star-barns-logo.jpg"
-              alt="Blue Star Barns — good coffee, cool bikes, Saugatuck"
-              width={500}
-              height={500}
+              src="/blue-star-barns-chainring.jpg"
+              alt="Blue Star Barns coffee and bikes, Saugatuck"
+              width={1563}
+              height={1563}
             />
             <small>THE BIKE DESK</small>
           </a>

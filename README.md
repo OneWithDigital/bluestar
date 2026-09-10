@@ -29,7 +29,7 @@ The dev command prints its local URL. The Sites production build outputs a Cloud
 - lib/demo-model.ts: pure fictional fixtures, time conversion, allocation and business rules, separate from presentation.
 - scripts/demo-contracts.mjs: meaningful model behavior checks, no external services.
 - public/lifestyle.png: generated illustrative photography, not an actual storefront.
-- public/blue-star-barns-logo.jpg: user-supplied original Blue Star Barns logo, preserved without cropping or alteration.
+- public/blue-star-barns-logo.jpg and public/blue-star-barns-chainring.jpg: user-supplied original logos, preserved without cropping or alteration.
 - .openai/hosting.json: private Sites project binding. Contains no credential.
 
 ## Demo storage and production boundary

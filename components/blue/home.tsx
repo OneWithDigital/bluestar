@@ -18,12 +18,20 @@ export const DEFAULT_CONTENT = {
   coffeeHours: 'Seasonal hours to be confirmed',
   bikeHours: 'Seasonal hours to be confirmed',
 };
-export function Brand() {
+export function Brand({
+  variant = 'bird',
+}: {
+  variant?: 'bird' | 'chainring';
+}) {
   return (
     <a href="/" className="brand" aria-label="Blue Star Barns home">
       <img
         className="brand-logo"
-        src="/blue-star-barns-logo.jpg"
+        src={
+          variant === 'bird'
+            ? '/blue-star-barns-logo.jpg'
+            : '/blue-star-barns-chainring.jpg'
+        }
         alt="Blue Star Barns — good coffee, cool bikes, Saugatuck"
         width={500}
         height={500}
@@ -159,11 +167,19 @@ export function Home({
           </div>
           <figure className="hero-image">
             <img
+              className="hero-lifestyle"
               src="/lifestyle.png"
               alt="Illustrative blue bicycle and a cup of coffee beside a sunlit lake"
               fetchPriority="high"
               width="1536"
               height="1024"
+            />
+            <img
+              className="hero-brand-badge"
+              src="/blue-star-barns-chainring.jpg"
+              alt="Blue Star Barns coffee and bikes chainring logo"
+              width={1563}
+              height={1563}
             />
             <figcaption>
               <span>TAKE THE SCENIC WAY</span>
@@ -328,7 +344,7 @@ export function Footer() {
   return (
     <footer className="footer">
       <div className="wrap footer-grid">
-        <Brand />
+        <Brand variant="chainring" />
         <p>
           3483 Blue Star Highway
           <br />
