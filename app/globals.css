@@ -188,13 +188,29 @@ p {
   flex-shrink: 0;
   border-radius: 3px;
 }
+.brand-bird .brand-logo {
+  width: 106px;
+  height: 86px;
+  border-radius: 0;
+}
 .brand small {
   font-family: var(--font-body), sans-serif;
-  font-size: 0.64rem;
-  letter-spacing: 0.1em;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
   display: block;
-  margin-top: 7px;
+  margin-top: 6px;
   font-weight: 650;
+}
+.brand-location {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+}
+.brand-name {
+  min-width: 0;
+  white-space: normal;
 }
 .public-nav {
   display: flex;
@@ -719,30 +735,36 @@ p {
     width: calc(100% - 36px);
   }
   .site-header {
-    min-height: 92px;
+    min-height: 100px;
     height: auto;
-    padding-block: 18px;
+    padding-block: 10px;
     gap: 12px;
     flex-wrap: wrap;
   }
   .brand {
-    font-size: 1.15rem;
-    gap: 7px;
+    font-size: 1.25rem;
+    gap: 10px;
   }
-  .site-header {
-    min-height: 100px;
-    padding-block: 10px;
+  .brand-bird .brand-logo {
+    width: 82px;
+    height: 72px;
   }
   .site-header .brand-name {
-    display: none;
+    display: block;
   }
   .brand small {
-    font-size: 0.6rem;
+    font-size: 0.75rem;
     letter-spacing: 0;
   }
+  .brand-location {
+    font-size: 0.6875rem;
+    letter-spacing: 0.025em;
+  }
   .header-cta {
-    margin-left: auto;
-    font-size: 0.82rem;
+    order: 3;
+    flex-basis: 100%;
+    margin-left: 0;
+    font-size: 0.875rem;
     min-height: 44px;
     padding: 9px 12px;
   }
@@ -751,7 +773,9 @@ p {
   }
   .menu-toggle {
     display: block;
-    min-width: 30px;
+    min-width: 44px;
+    margin-left: auto;
+    order: 2;
   }
   .public-nav {
     display: none;
@@ -1391,6 +1415,9 @@ p {
   gap: 22px;
   background: var(--cream);
 }
+.partner-options .brand {
+  max-width: 100%;
+}
 .partner-options .quick-book {
   grid-template-columns: 1fr 1fr;
   width: 100%;
@@ -1993,13 +2020,13 @@ p {
     padding: 8px 10px;
   }
   .site-header .brand {
-    font-size: 1.05rem;
+    font-size: 1.25rem;
   }
   .site-header {
     gap: 8px;
   }
   .site-header .brand small {
-    font-size: 0.6rem;
+    font-size: 0.75rem;
   }
   .quick-book {
     grid-template-columns: 1fr;

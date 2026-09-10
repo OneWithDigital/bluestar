@@ -24,20 +24,32 @@ export function Brand({
   variant?: 'bird' | 'chainring';
 }) {
   return (
-    <a href="/" className="brand" aria-label="Blue Star Barns home">
+    <a
+      href="/"
+      className={'brand brand-' + variant}
+      aria-label="Blue Star Barns home"
+    >
       <img
         className="brand-logo"
         src={
           variant === 'bird'
-            ? '/blue-star-barns-logo.jpg'
+            ? '/blue-star-barns-bird.png'
             : '/blue-star-barns-chainring.jpg'
         }
-        alt="Blue Star Barns — good coffee, cool bikes, Saugatuck"
-        width={500}
-        height={500}
+        alt={
+          variant === 'bird'
+            ? 'Bird perched on bicycle handlebars'
+            : 'Blue Star Barns — coffee and bikes, Saugatuck'
+        }
+        width={variant === 'bird' ? 1391 : 1563}
+        height={variant === 'bird' ? 1131 : 1563}
       />
       <span className="brand-name" aria-hidden="true">
-        Blue Star Barns<small>COFFEE & BIKES · SAUGATUCK, MI</small>
+        Blue Star Barns
+        <small>
+          GOOD COFFEE · COOL BIKES
+          <span className="brand-location">SAUGATUCK, MICHIGAN</span>
+        </small>
       </span>
     </a>
   );
