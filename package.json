@@ -8,6 +8,8 @@
   "scripts": {
     "dev": "vinext dev",
     "build": "vinext build",
+    "build:hostinger": "vite build --config vite.hostinger.config.ts",
+    "preview:hostinger": "vite preview --config vite.hostinger.config.ts --host 127.0.0.1",
     "start": "wrangler dev --config dist/server/wrangler.json",
     "lint": "oxlint",
     "format": "oxfmt"

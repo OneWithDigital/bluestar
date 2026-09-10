@@ -1,6 +1,8 @@
-# Blue Star Barns — private website example
+# Blue Star Barns — website example
 
 Private review: https://blue-star-barns-coffee-bikes-demo.erik899058.chatgpt.site
+
+Published Hostinger demo: https://bluestar.onewithdigital.com (public demonstration; still uses fictional data only).
 
 This is a fictional-data layout and interaction example, with pay at pickup through DripOS selected by default. No production services are connected.
 
@@ -38,11 +40,11 @@ Use the reviewer bar to switch views, preview full payment or a sample 20% booki
 - The deposit is a sample 20% booking deposit, not a refundable damage deposit. Staff refund simulation refunds the entire recorded payment; partial refunds are not implemented.
 - Booking emails are previews only. No email, reminder, cancellation notice, marketing subscription or promotional campaign is sent. A real reminder scheduler is not implemented.
 - Cancellation and no-show immediately release demo inventory; refund status is a separate action. Final cancellation/no-show rules remain a business decision.
-- Staff demo is deliberately open inside the private review Site. It has no independent staff authentication, roles, audit security or production database.
+- Staff demo is deliberately open, including on the public Hostinger demonstration. It has no independent staff authentication, roles, audit security or production database. Each visitor sees only that visitor's browser-session fixtures and edits.
 - The partner widget is an in-page layout and referral demonstration. A real cross-domain embed, commission accounting and partner payouts are not implemented.
 - An imagegen-edited transparent bird-and-handlebars cutout appears beside readable website text in the customer header and partner page. Its surrounding background and embedded lettering are removed; the bird retains light interior detail. This is an edited raster interpretation, and the original supplied logo is retained in the source. The supplied business-card chainring logo appears on the homepage photo, footer and staff sidebar. Both original JPEGs are included unchanged in the source. The palette explores charcoal, warm cream, teal, orange and yellow from the business card; teal is darkened for readable links and staff controls. The generated lifestyle photo is illustrative, not an actual property or product photo. Category cards use neutral bicycle icons rather than claims about actual models.
 - The Visit section intentionally leaves coffee hours and bike hours separate and unconfirmed.
-- The source uses the current Sites/Vinext Worker build. It is not a ready-to-upload Hostinger production package.
+- The source retains the Sites/Vinext Worker build and adds a separate ready-to-upload Hostinger static demo build. It reuses the same application components, stock model, artwork and fonts. It is not a production reservation backend.
 
 ## Production questions
 
@@ -58,6 +60,8 @@ Use the reviewer bar to switch views, preview full payment or a sample 20% booki
 - Who will have staff access, and who will own support, backups, monitoring and ongoing costs?
 
 ## Validation
+
+The Hostinger deployment was verified on September 9, 2026 (Eastern): the separate static build and TypeScript check passed, all 21 model checks passed, and all five routes served the new application over validated HTTPS. A live two-bike booking confirmed the correct unpaid pickup balance and appeared in staff with matching quantities and details. The Hostinger homepage had no horizontal overflow at 390px; all images loaded and the intended fonts were applied. Test data was reset afterward. See HOSTINGER-DEPLOYMENT.md for the build and deployment details.
 
 The production build and TypeScript check passed. Twenty-one focused behavior checks cover shared stock quantities, peak concurrent demand, larger group bookings, stock reductions, partial maintenance, duplicate selections, migration of existing demo sessions, Eastern time, turnaround, cancellation, no-show, returns, changed bookings, deposit/payment status, closure settings and invalid dates.
 
