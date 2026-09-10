@@ -103,11 +103,12 @@ export interface BikeRecord {
   id: string;
   category: Category;
   size: string;
-  condition: string;
+  quantity: number;
 }
 export interface Block {
   id: string;
   bikeId: string;
+  quantity: number;
   start: number;
   end: number;
   reason: string;
@@ -133,7 +134,6 @@ export interface Contact {
 export interface Booking extends Contact, Slot {
   id: string;
   lines: Line[];
-  bikeIds: string[];
   start: number;
   end: number;
   buffer: number;
@@ -160,7 +160,7 @@ export interface Content {
   bikeHours: string;
 }
 export interface State {
-  version: 3;
+  version: 4;
   seedDay: string;
   bikes: BikeRecord[];
   blocks: Block[];
@@ -180,7 +180,7 @@ export const demoContact: Contact = {
 };
 export function seed(now = Date.now()): State {
   const s: State = {
-    version: 3,
+    version: 4,
     seedDay: localDate(now),
     revision: 0,
     bikes: [],
@@ -208,16 +208,16 @@ export function seed(now = Date.now()): State {
   };
   for (const c of CATEGORIES)
     for (const size of c.sizes)
-      for (let i = 1; i <= 2; i++)
-        s.bikes.push({
-          id: c.prefix + '-' + size + '-0' + i,
-          category: c.id,
-          size,
-          condition: 'Ready',
-        });
+      s.bikes.push({
+        id: c.id + '-' + size,
+        category: c.id,
+        size,
+        quantity: 2,
+      });
   s.blocks.push({
     id: 'maintenance-seed',
-    bikeId: 'HYB-L-02',
+    bikeId: 'hybrid-L',
+    quantity: 1,
     start: at(dayPlus(0, now), '10:00'),
     end: at(dayPlus(2, now), '18:00'),
     reason: 'Sample brake service',
@@ -247,9 +247,6 @@ export function seed(now = Date.now()): State {
       name,
       policy: true,
       lines: [{ category, size, qty: 1 }],
-      bikeIds: [
-        CATEGORIES.find((c) => c.id === category)!.prefix + '-' + size + '-01',
-      ],
       start,
       end,
       buffer: 30,
@@ -298,6 +295,68 @@ export function seed(now = Date.now()): State {
   );
   return s;
 }
+export function restoreState(raw: unknown, now = Date.now()): State {
+  if (!raw || typeof raw !== 'object') return seed(now);
+  const saved = raw as State;
+  if (saved.seedDay !== localDate(now)) return seed(now);
+  if (saved.version === 4) return saved;
+  type Legacy = Omit<State, 'version' | 'bikes' | 'blocks' | 'bookings'> & {
+    version: number;
+    bikes: (Omit<BikeRecord, 'quantity'> & { condition: string })[];
+    blocks: Omit<Block, 'quantity'>[];
+    bookings: (Booking & { bikeIds: string[] })[];
+  };
+  const old = raw as Legacy;
+  if (old.version !== 3) return seed(now);
+  const next: State = {
+    ...old,
+    version: 4,
+    bikes: [],
+    blocks: [],
+    bookings: old.bookings.map(({ bikeIds: _ids, ...b }) => ({
+      ...b,
+      lines: groupedLines(b.lines),
+    })),
+  };
+  for (const c of CATEGORIES)
+    for (const size of c.sizes) {
+      const units = old.bikes.filter(
+        (b) => b.category === c.id && b.size === size,
+      );
+      const id = c.id + '-' + size;
+      next.bikes.push({ id, category: c.id, size, quantity: units.length });
+      for (const unit of units) {
+        const periods = old.blocks
+          .filter((b) => b.bikeId === unit.id)
+          .map((b) => ({ ...b }));
+        if (unit.condition !== 'Ready')
+          periods.push({
+            id: '',
+            bikeId: unit.id,
+            start: 0,
+            end: 253402214400000,
+            reason: unit.condition,
+          });
+        periods.sort((a, b) => a.start - b.start);
+        const merged: typeof periods = [];
+        for (const p of periods) {
+          const last = merged[merged.length - 1];
+          if (last && p.start <= last.end) {
+            last.end = Math.max(last.end, p.end);
+            if (last.reason !== p.reason) last.reason += '; ' + p.reason;
+          } else merged.push({ ...p });
+        }
+        for (const p of merged)
+          next.blocks.push({
+            ...p,
+            id: 'MT-migrated-' + next.blocks.length,
+            bikeId: id,
+            quantity: 1,
+          });
+      }
+    }
+  return next;
+}
 export function slotInterval(
   s: State,
   slot: Slot,
@@ -330,38 +389,73 @@ export function slotInterval(
   return { start, end };
 }
 const overlaps = (a: number, b: number, c: number, d: number) => a < d && c < b;
-export function isAvailable(
+export const lineQuantity = (lines: Line[], bike?: BikeRecord) =>
+  lines.reduce(
+    (sum, l) =>
+      sum +
+      (!bike || (l.category === bike.category && l.size === bike.size)
+        ? l.qty
+        : 0),
+    0,
+  );
+export const rideSummary = (lines: Line[]) =>
+  lines
+    .map((l) => `${l.qty} × ${catName(l.category)} · ${sizeName(l.size)}`)
+    .join('; ');
+function groupedLines(lines: Line[]) {
+  const result: Line[] = [];
+  for (const line of lines) {
+    const existing = result.find(
+      (l) => l.category === line.category && l.size === line.size,
+    );
+    if (existing) existing.qty += line.qty;
+    else result.push({ ...line });
+  }
+  return result;
+}
+function bookingStop(b: Booking) {
+  return b.status === 'Checked out'
+    ? Infinity
+    : (b.status === 'Returned' ? (b.returnAt ?? b.end) : b.end) +
+        b.buffer * 60000;
+}
+// Interchangeable stock is consumed by the peak concurrent quantity, not by
+// the sum of every booking that touches the requested interval.
+export function stockUsed(
   s: State,
   bike: BikeRecord,
   start: number,
   end: number,
   ignoreId?: string,
 ) {
-  if (bike.condition !== 'Ready') return false;
-  if (
-    s.blocks.some(
-      (b) =>
-        b.bikeId === bike.id &&
-        overlaps(start, end + s.settings.buffer * 60000, b.start, b.end),
-    )
-  )
-    return false;
-  return !s.bookings.some((b) => {
-    if (
-      b.id === ignoreId ||
-      !b.bikeIds.includes(bike.id) ||
-      b.status === 'Cancelled' ||
-      b.status === 'No-show'
-    )
-      return false;
-    const stop =
-      b.status === 'Checked out'
-        ? Infinity
-        : b.status === 'Returned'
-          ? (b.returnAt ?? b.end) + b.buffer * 60000
-          : b.end + b.buffer * 60000;
-    return overlaps(start, end + s.settings.buffer * 60000, b.start, stop);
-  });
+  const events: [number, number][] = [];
+  function add(from: number, to: number, qty: number) {
+    if (qty && overlaps(start, end, from, to)) {
+      events.push([Math.max(start, from), qty], [Math.min(end, to), -qty]);
+    }
+  }
+  for (const block of s.blocks)
+    if (block.bikeId === bike.id) add(block.start, block.end, block.quantity);
+  for (const b of s.bookings)
+    if (b.id !== ignoreId && !['Cancelled', 'No-show'].includes(b.status))
+      add(b.start, bookingStop(b), lineQuantity(b.lines, bike));
+  events.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  let current = 0,
+    peak = 0;
+  for (const [, delta] of events) {
+    current += delta;
+    peak = Math.max(peak, current);
+  }
+  return peak;
+}
+export function availableCount(
+  s: State,
+  bike: BikeRecord,
+  start: number,
+  end: number,
+  ignoreId?: string,
+) {
+  return Math.max(0, bike.quantity - stockUsed(s, bike, start, end, ignoreId));
 }
 export function availability(
   s: State,
@@ -374,12 +468,20 @@ export function availability(
     c.sizes.map((size) => ({
       category: c.id,
       size,
-      count: s.bikes.filter(
-        (b) =>
-          b.category === c.id &&
-          b.size === size &&
-          isAvailable(s, b, start, end, ignoreId),
-      ).length,
+      count: s.bikes
+        .filter((b) => b.category === c.id && b.size === size)
+        .reduce(
+          (sum, b) =>
+            sum +
+            availableCount(
+              s,
+              b,
+              start,
+              end + s.settings.buffer * 60000,
+              ignoreId,
+            ),
+          0,
+        ),
     })),
   );
 }
@@ -407,31 +509,34 @@ export function assign(
         ) ||
         !Number.isInteger(l.qty) ||
         l.qty < 1 ||
-        l.qty > 12,
+        l.qty > 100,
     )
   )
     throw Error(
       'Select at least one available bike with a valid size and quantity.',
     );
-  const ids: string[] = [];
-  for (const line of lines) {
-    const eligible = s.bikes.filter(
-      (b) =>
-        b.category === line.category &&
-        b.size === line.size &&
-        !ids.includes(b.id) &&
-        isAvailable(s, b, start, end, ignoreId),
+  for (const line of groupedLines(lines)) {
+    const bike = s.bikes.find(
+      (b) => b.category === line.category && b.size === line.size,
     );
-    if (eligible.length < line.qty)
+    if (
+      !bike ||
+      availableCount(
+        s,
+        bike,
+        start,
+        end + s.settings.buffer * 60000,
+        ignoreId,
+      ) < line.qty
+    )
       throw Error(
         catName(line.category) +
           ' · ' +
           sizeName(line.size) +
           ' is no longer available in that quantity. Try another size or pickup time.',
       );
-    ids.push(...eligible.slice(0, line.qty).map((b) => b.id));
   }
-  return { start, end, bikeIds: ids };
+  return { start, end };
 }
 export function createBooking(
   s: State,
@@ -468,7 +573,7 @@ export function createBooking(
     ...slot,
     ...allocation,
     id,
-    lines: structuredClone(lines),
+    lines: groupedLines(lines),
     source,
     buffer: s.settings.buffer,
     total,
@@ -504,7 +609,7 @@ export function updateBooking(
     throw Error('Only confirmed reservations can be edited.');
   const allocation = assign(s, slot, lines, id, now);
   Object.assign(b, slot, allocation, {
-    lines: structuredClone(lines),
+    lines: groupedLines(lines),
     total: totalFor(s, lines, slot.duration),
     buffer: s.settings.buffer,
   });
@@ -578,11 +683,26 @@ export function changeStatus(
         'Pickup is not due yet. Use Today’s sample reservation when its pickup time arrives.',
       );
     if (due(b) > 0) throw Error('Record the remaining pickup payment first.');
-    for (const id of b.bikeIds) {
-      const bike = s.bikes.find((x) => x.id === id)!;
-      if (!isAvailable(s, bike, now, Math.max(now + 60000, b.end), b.id))
+    for (const line of groupedLines(b.lines)) {
+      const bike = s.bikes.find(
+        (x) => x.category === line.category && x.size === line.size,
+      );
+      if (
+        !bike ||
+        availableCount(
+          s,
+          bike,
+          now,
+          Math.max(now + 60000, b.end) + b.buffer * 60000,
+          b.id,
+        ) < line.qty
+      )
         throw Error(
-          'Bike ' + id + ' has a conflict. Review its assignment first.',
+          'Not enough available ' +
+            catName(line.category) +
+            ' · ' +
+            sizeName(line.size) +
+            '. Review this rental before checkout.',
         );
     }
   }
@@ -597,106 +717,73 @@ export function changeStatus(
         : ''),
   });
 }
-export function reassign(
-  s: State,
-  id: string,
-  oldId: string,
-  newId: string,
-  now = Date.now(),
-) {
-  const b = getBooking(s, id);
-  if (b.status !== 'Confirmed') throw Error('Reassign bikes before checkout.');
-  const old = s.bikes.find((x) => x.id === oldId),
-    bike = s.bikes.find((x) => x.id === newId);
-  if (
-    !old ||
-    !bike ||
-    !b.bikeIds.includes(oldId) ||
-    b.bikeIds.includes(newId) ||
-    bike.category !== old.category ||
-    bike.size !== old.size ||
-    !isAvailable(s, bike, b.start, b.end, id)
-  )
-    throw Error('Choose another available bike of the same category and size.');
-  b.bikeIds = b.bikeIds.map((x) => (x === oldId ? newId : x));
-  b.history.push({
-    at: now,
-    event: 'Assigned ' + newId + ' in place of ' + oldId,
-  });
-}
 export function maintenance(
   s: State,
   bikeId: string,
   start: number,
   end: number,
   reason: string,
+  quantity = 1,
 ) {
+  const bike = s.bikes.find((b) => b.id === bikeId);
   if (
-    !s.bikes.some((b) => b.id === bikeId) ||
+    !bike ||
+    !Number.isInteger(quantity) ||
+    quantity < 1 ||
     !Number.isFinite(start) ||
     !Number.isFinite(end) ||
     end <= start ||
     !reason.trim()
   )
-    throw Error('Choose a bike, valid downtime and a reason.');
+    throw Error(
+      'Choose a bike type, a whole-number quantity, valid downtime and a reason.',
+    );
   const conflicts = s.bookings.filter(
     (b) =>
-      b.bikeIds.includes(bikeId) &&
+      lineQuantity(b.lines, bike) > 0 &&
       !['Cancelled', 'No-show'].includes(b.status) &&
-      overlaps(
-        start,
-        end,
-        b.start,
-        b.status === 'Checked out'
-          ? Infinity
-          : (b.returnAt ?? b.end) + b.buffer * 60000,
-      ),
+      overlaps(start, end, b.start, bookingStop(b)),
   );
-  if (conflicts.length)
+  if (availableCount(s, bike, start, end) < quantity)
     throw Error(
-      'Maintenance conflicts with ' +
+      'Maintenance conflicts with available stock' +
+        (conflicts.length ? ': ' : '. ') +
         conflicts.map((b) => b.id + ' (' + b.name + ')').join(', ') +
-        '. Open the reservation and reassign it, or choose different downtime.',
+        '. Reduce the quantity, review the reservations or choose different downtime.',
     );
   s.blocks.push({
     id: 'MT-' + (s.blocks.length + 1) + '-' + s.revision,
     bikeId,
+    quantity,
     start,
     end,
     reason,
   });
 }
-export function saveBike(s: State, bike: BikeRecord, oldId?: string) {
+export function saveStock(
+  s: State,
+  category: Category,
+  size: string,
+  quantity: number,
+  now = Date.now(),
+) {
   if (
-    !/^[A-Z0-9-]{3,30}$/.test(bike.id) ||
-    !CATEGORIES.some(
-      (c) => c.id === bike.category && c.sizes.includes(bike.size),
-    )
+    !CATEGORIES.some((c) => c.id === category && c.sizes.includes(size)) ||
+    !Number.isInteger(quantity) ||
+    quantity < 0 ||
+    quantity > 100
   )
     throw Error(
-      'Use a unique bike ID with letters, digits or hyphens, and a valid category and size.',
+      'Choose a valid bike type and size, and a whole-number stock quantity from 0 to 100.',
     );
-  if (s.bikes.some((b) => b.id === bike.id && b.id !== oldId))
-    throw Error('That bike ID already exists.');
-  if (oldId) {
-    const old = s.bikes.find((b) => b.id === oldId);
-    if (!old) throw Error('Bike not found.');
-    if (
-      s.bookings.some(
-        (b) =>
-          b.bikeIds.includes(oldId) &&
-          ['Confirmed', 'Checked out'].includes(b.status),
-      ) &&
-      (old.category !== bike.category ||
-        old.size !== bike.size ||
-        bike.condition !== 'Ready')
-    )
-      throw Error(
-        'This bike has an active reservation. Reassign that reservation before changing its category, size or condition.',
-      );
-    if (bike.id !== oldId) throw Error('Keep the existing bike ID.');
-    Object.assign(old, bike);
-  } else s.bikes.push(bike);
+  const bike = s.bikes.find((b) => b.category === category && b.size === size);
+  const minimum = bike ? stockUsed(s, bike, now, Infinity) : 0;
+  if (quantity < minimum)
+    throw Error(
+      `Keep at least ${minimum} in stock for current or future reservations, turnaround and maintenance. Review those commitments before reducing stock.`,
+    );
+  if (bike) bike.quantity = quantity;
+  else s.bikes.push({ id: category + '-' + size, category, size, quantity });
 }
 export function saveSettings(s: State, next: Settings) {
   if (
@@ -731,9 +818,20 @@ export function saveSettings(s: State, next: Settings) {
           '. Review or change that booking first.',
       );
     }
-    for (const id of b.bikeIds) {
-      const bike = s.bikes.find((x) => x.id === id)!;
-      if (!isAvailable(candidate, bike, b.start, b.end, b.id))
+    for (const line of groupedLines(b.lines)) {
+      const bike = s.bikes.find(
+        (x) => x.category === line.category && x.size === line.size,
+      );
+      if (
+        !bike ||
+        availableCount(
+          candidate,
+          bike,
+          b.start,
+          b.end + next.buffer * 60000,
+          b.id,
+        ) < line.qty
+      )
         throw Error(
           'The new turnaround buffer conflicts with ' +
             b.id +

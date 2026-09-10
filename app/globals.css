@@ -1617,6 +1617,24 @@ p {
   gap: 10px;
   color: var(--brand);
 }
+.stock-counts {
+  margin: 20px 0 0;
+  border-block: 1px solid var(--border);
+  padding-block: 10px;
+  font-size: 0.875rem;
+}
+.stock-counts > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block: 5px;
+}
+.stock-counts dd {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1.125rem;
+}
 .detail-rider > p {
   margin-top: 8px;
 }

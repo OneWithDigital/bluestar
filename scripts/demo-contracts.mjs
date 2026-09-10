@@ -13,7 +13,9 @@ import {
   paymentStatus,
   due,
   saveSettings,
-  saveBike,
+  saveStock,
+  restoreState,
+  lineQuantity,
   assign,
   demoContact,
 } from '../lib/demo-model.ts';
@@ -26,8 +28,10 @@ const count = (s, sl = slot) =>
   availability(s, sl, undefined, now).find(
     (x) => x.category === 'comfort' && x.size === 'L',
   ).count;
+let checks = 0;
 const check = (name, fn) => {
   fn();
+  checks++;
   console.log('PASS ' + name);
 };
 check('Eastern summer and winter offsets', () => {
@@ -41,7 +45,7 @@ check('Eastern summer and winter offsets', () => {
   );
 });
 check(
-  'two physical bikes, immediate unpaid confirmation and shared availability',
+  'two matching bikes from one stock group, unpaid confirmation and shared availability',
   () => {
     const s = make();
     const b = createBooking(
@@ -54,8 +58,9 @@ check(
       false,
       now,
     );
-    assert.equal(b.bikeIds.length, 2);
-    assert.equal(new Set(b.bikeIds).size, 2);
+    assert.equal(lineQuantity(b.lines), 2);
+    assert.equal(b.lines.length, 1);
+    assert.equal('bikeIds' in b, false);
     assert.equal(b.total, 50);
     assert.equal(b.status, 'Confirmed');
     assert.equal(paymentStatus(b), 'Unpaid');
@@ -212,7 +217,7 @@ check(
     );
     const count = s.blocks.length;
     assert.throws(
-      () => maintenance(s, b.bikeIds[0], b.start, b.end, 'Sample service'),
+      () => maintenance(s, 'comfort-L', b.start, b.end, 'Sample service'),
       /Maintenance conflicts/,
     );
     assert.equal(s.blocks.length, count);
@@ -222,7 +227,7 @@ check('maintenance blocks remove affected bikes and can be released', () => {
   const s = make();
   maintenance(
     s,
-    'COM-L-01',
+    'comfort-L',
     at(slot.date, '10:00'),
     at(slot.date, '12:00'),
     'Service',
@@ -245,12 +250,12 @@ check('changed booking recalculates and rejects unavailable quantity', () => {
   );
   updateBooking(s, b.id, { ...slot, duration: '4' }, lines, now);
   assert.equal(b.total, 80);
-  assert.equal(b.bikeIds.length, 2);
+  assert.equal(lineQuantity(b.lines), 2);
   assert.throws(() =>
     updateBooking(s, b.id, slot, [{ ...lines[0], qty: 3 }], now),
   );
 });
-check('closure settings and unsafe bike edits are validated', () => {
+check('closure settings and unsafe stock reductions are validated', () => {
   const s = make();
   const b = createBooking(
     s,
@@ -266,14 +271,224 @@ check('closure settings and unsafe bike edits are validated', () => {
     () => saveSettings(s, { ...s.settings, closures: [slot.date] }),
     /conflict/,
   );
-  assert.throws(
-    () =>
-      saveBike(
-        s,
-        { ...s.bikes.find((x) => x.id === b.bikeIds[0]), condition: 'Retired' },
-        b.bikeIds[0],
-      ),
-    /active reservation/,
-  );
+  assert.throws(() => saveStock(s, 'comfort', 'L', 1, now), /Keep at least 2/);
 });
-console.log('13 behavior checks passed');
+check(
+  'stock increases stay in one group and support larger reservations',
+  () => {
+    const s = make();
+    assert.equal(s.bikes.length, 6);
+    assert.equal(
+      s.bikes.reduce((sum, b) => sum + b.quantity, 0),
+      12,
+    );
+    saveStock(s, 'comfort', 'L', 6, now);
+    assert.equal(s.bikes.length, 6);
+    assert.equal(count(s), 6);
+    const b = createBooking(
+      s,
+      slot,
+      [{ ...lines[0], qty: 4 }],
+      contact,
+      'Website',
+      'pickup',
+      false,
+      now,
+    );
+    assert.equal(count(s), 2);
+    assert.equal(b.total, 100);
+    assert.equal(s.bikes.find((x) => x.id === 'comfort-L').quantity, 6);
+    changeStatus(s, b.id, 'Cancelled', now);
+    assert.equal(count(s), 6);
+  },
+);
+check('repeated lines cannot bypass shared quantity limits', () => {
+  const s = make();
+  assert.throws(
+    () => assign(s, slot, [lines[0], lines[0]], undefined, now),
+    /no longer available/,
+  );
+  const b = createBooking(
+    s,
+    slot,
+    [
+      { ...lines[0], qty: 1 },
+      { ...lines[0], qty: 1 },
+    ],
+    contact,
+    'Website',
+    'pickup',
+    false,
+    now,
+  );
+  assert.equal(b.lines.length, 1);
+  assert.equal(b.lines[0].qty, 2);
+});
+check(
+  'availability uses peak concurrent demand across sequential rentals',
+  () => {
+    const s = make();
+    const one = [{ ...lines[0], qty: 1 }];
+    createBooking(s, slot, one, contact, 'Website', 'pickup', false, now);
+    createBooking(
+      s,
+      { ...slot, time: '12:30' },
+      one,
+      contact,
+      'Website',
+      'pickup',
+      false,
+      now,
+    );
+    assert.equal(count(s, { ...slot, duration: 'day' }), 1);
+    saveStock(s, 'comfort', 'L', 1, now);
+    assert.equal(count(s, { ...slot, duration: 'day' }), 0);
+  },
+);
+check(
+  'maintenance subtracts only its quantity and respects other commitments',
+  () => {
+    const s = make();
+    saveStock(s, 'comfort', 'L', 5, now);
+    maintenance(
+      s,
+      'comfort-L',
+      at(slot.date, '10:00'),
+      at(slot.date, '18:00'),
+      'Service two',
+      2,
+    );
+    assert.equal(count(s), 3);
+    createBooking(s, slot, lines, contact, 'Website', 'pickup', false, now);
+    assert.equal(count(s), 1);
+    const before = structuredClone(s);
+    assert.throws(
+      () =>
+        maintenance(
+          s,
+          'comfort-L',
+          at(slot.date, '10:00'),
+          at(slot.date, '18:00'),
+          'Too many',
+          2,
+        ),
+      /Maintenance conflicts/,
+    );
+    assert.deepEqual(s, before);
+    assert.throws(
+      () => saveStock(s, 'comfort', 'L', 3, now),
+      /Keep at least 4/,
+    );
+    saveStock(s, 'comfort', 'L', 4, now);
+    assert.equal(count(s), 0);
+    s.blocks = s.blocks.filter((b) => b.bikeId !== 'comfort-L');
+    assert.equal(count(s), 2);
+  },
+);
+check(
+  'invalid and zero stock quantities are handled without changing other groups',
+  () => {
+    const s = make();
+    for (const qty of [-1, 1.5, NaN, Infinity, 101]) {
+      assert.throws(
+        () => saveStock(s, 'comfort', 'L', qty, now),
+        /whole-number/,
+      );
+    }
+    for (const qty of [0, -1, 1.5, NaN]) {
+      assert.throws(() =>
+        maintenance(
+          s,
+          'comfort-L',
+          at(slot.date, '10:00'),
+          at(slot.date, '12:00'),
+          'Service',
+          qty,
+        ),
+      );
+    }
+    saveStock(s, 'comfort', 'L', 0, now);
+    assert.equal(count(s), 0);
+    assert.equal(s.bikes.find((b) => b.id === 'comfort-M').quantity, 2);
+  },
+);
+check(
+  'checking out and returning several matching bikes preserves turnaround',
+  () => {
+    const s = make();
+    const b = createBooking(
+      s,
+      slot,
+      lines,
+      contact,
+      'Website',
+      'full',
+      true,
+      now,
+    );
+    changeStatus(s, b.id, 'Checked out', b.start);
+    assert.equal(count(s, { ...slot, date: '2026-09-11' }), 0);
+    changeStatus(s, b.id, 'Returned', b.end);
+    assert.equal(count(s, { ...slot, time: '12:15' }), 0);
+    assert.equal(count(s, { ...slot, time: '12:30' }), 2);
+  },
+);
+check('changing turnaround cannot overbook grouped stock', () => {
+  const s = make();
+  createBooking(s, slot, lines, contact, 'Website', 'pickup', false, now);
+  createBooking(
+    s,
+    { ...slot, time: '12:30' },
+    lines,
+    contact,
+    'Website',
+    'pickup',
+    false,
+    now,
+  );
+  assert.throws(
+    () => saveSettings(s, { ...s.settings, buffer: 60 }),
+    /buffer conflicts/,
+  );
+  assert.equal(s.settings.buffer, 30);
+});
+check(
+  'existing session reservations and overlapping individual downtime migrate safely',
+  () => {
+    const old = make();
+    old.version = 3;
+    old.bikes = old.bikes.flatMap(({ quantity, ...b }) =>
+      [1, 2].map((n) => ({ ...b, id: b.id + '-' + n, condition: 'Ready' })),
+    );
+    old.bookings = old.bookings.map((b) => ({
+      ...b,
+      bikeIds: ['legacy-unit'],
+    }));
+    old.blocks = [
+      {
+        id: 'a',
+        bikeId: 'comfort-L-1',
+        start: at(slot.date, '10:00'),
+        end: at(slot.date, '14:00'),
+        reason: 'Service',
+      },
+      {
+        id: 'b',
+        bikeId: 'comfort-L-1',
+        start: at(slot.date, '12:00'),
+        end: at(slot.date, '16:00'),
+        reason: 'Inspection',
+      },
+    ];
+    const s = restoreState(old, now);
+    assert.equal(s.version, 4);
+    assert.equal(s.bikes.length, 6);
+    assert.equal(s.bookings.length, old.bookings.length);
+    assert.equal(s.bookings[0].name, old.bookings[0].name);
+    assert.equal('bikeIds' in s.bookings[0], false);
+    assert.equal(count(s, { ...slot, time: '12:00' }), 1);
+    assert.equal(s.blocks.length, 1);
+    assert.equal(restoreState(JSON.parse(JSON.stringify(s)), now).version, 4);
+  },
+);
+console.log(`${checks} behavior checks passed`);

@@ -23,16 +23,18 @@ The dev command prints its local URL. The Sites production build outputs a Cloud
 - app/: five route entry points, metadata and shared styles.
 - components/blue/home.tsx: homepage, navigation and reusable partner/home booking entry.
 - components/blue/rental.tsx: selection, details, checkout simulation, confirmation and email preview.
-- components/blue/staff.tsx: staff operations, bike editing, downtime, rates/hours and website text.
+- components/blue/staff.tsx: staff operations, grouped stock quantities, partial maintenance downtime, rates/hours and website text.
 - components/blue/store.tsx: local session state and clone-before-commit transactions.
 - components/blue/site.tsx: shared reviewer controls, route surface, partner example and optional WebMCP registrations.
-- lib/demo-model.ts: pure fictional fixtures, time conversion, allocation and business rules, separate from presentation.
+- lib/demo-model.ts: pure fictional fixtures, time conversion, pooled stock availability and business rules, separate from presentation.
 - scripts/demo-contracts.mjs: meaningful model behavior checks, no external services.
 - public/lifestyle.png: generated illustrative photography, not an actual storefront.
 - public/blue-star-barns-logo.jpg and public/blue-star-barns-chainring.jpg: user-supplied original logos, preserved without cropping or alteration.
 - .openai/hosting.json: private Sites project binding. Contains no credential.
 
 ## Demo storage and production boundary
+
+Matching bikes are stored as one type-and-size record with a quantity. Reservations and maintenance consume quantities at peak concurrent usage; stock reductions protect current and future commitments. Existing v3 demo sessions migrate to the grouped v4 model while preserving reservations and payments.
 
 State uses one browser tab’s sessionStorage and resets on a later Eastern day. Model mutations are applied to a clone and committed only after validation, preserving prior state on a failure. This is not a server transaction or production concurrency guarantee.
 

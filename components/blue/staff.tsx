@@ -62,17 +62,17 @@ import {
   recordPayment,
   refund,
   changeStatus,
-  reassign,
   updateBooking,
   maintenance,
-  saveBike,
+  saveStock,
   saveSettings,
-  isAvailable,
+  availableCount,
+  lineQuantity,
+  rideSummary,
   type Booking,
   type BookingStatus,
   type Slot,
   type Line,
-  type BikeRecord,
   type Category,
   type Duration,
   type Settings,
@@ -103,7 +103,7 @@ export function Staff() {
     .filter(
       (b) =>
         (filter === 'All statuses' || b.status === filter) &&
-        (b.name + ' ' + b.id + ' ' + b.source + ' ' + b.bikeIds.join(' '))
+        (b.name + ' ' + b.id + ' ' + b.source + ' ' + rideSummary(b.lines))
           .toLowerCase()
           .includes(search.toLowerCase()),
     )
@@ -159,7 +159,9 @@ export function Staff() {
             <p className="muted">
               {tab === 'today'
                 ? 'A clear view of what’s going out and coming back.'
-                : 'One sample calendar for website, partner and walk-in rentals.'}
+                : tab === 'bikes'
+                  ? 'Manage matching bikes together by type, size and quantity.'
+                  : 'One sample calendar for website, partner and walk-in rentals.'}
             </p>
           </div>
           {['today', 'reservations'].includes(tab) && (
@@ -169,7 +171,7 @@ export function Staff() {
           )}
           {tab === 'bikes' && (
             <button className="button" onClick={() => setBikeEditor('new')}>
-              <Plus size={19} /> Add sample bike
+              <Plus size={19} /> Add stock
             </button>
           )}
         </header>
@@ -192,7 +194,7 @@ export function Staff() {
                 <strong>
                   {state.bookings
                     .filter((b) => b.status === 'Checked out')
-                    .reduce((a, b) => a + b.bikeIds.length, 0)}
+                    .reduce((a, b) => a + lineQuantity(b.lines), 0)}
                 </strong>
                 <small>Return must be recorded</small>
               </div>
@@ -249,7 +251,7 @@ export function Staff() {
             <div className="staff-filters">
               <Field
                 label="Search reservations"
-                placeholder="Name, number, bike ID or source"
+                placeholder="Name, number, bike type or source"
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -273,52 +275,71 @@ export function Staff() {
         ) : tab === 'bikes' ? (
           <div className="inventory-grid">
             {state.bikes.map((b) => {
-              const active = state.bookings.find(
-                (r) => r.bikeIds.includes(b.id) && r.status === 'Checked out',
-              );
-              const block = state.blocks.find(
-                (m) =>
-                  m.bikeId === b.id &&
-                  m.start <= Date.now() &&
-                  m.end > Date.now(),
+              const out = state.bookings
+                .filter((r) => r.status === 'Checked out')
+                .reduce((sum, r) => sum + lineQuantity(r.lines, b), 0);
+              const downtime = state.blocks
+                .filter(
+                  (m) =>
+                    m.bikeId === b.id &&
+                    m.start <= Date.now() &&
+                    m.end > Date.now(),
+                )
+                .reduce((sum, m) => sum + m.quantity, 0);
+              const ready = availableCount(
+                state,
+                b,
+                Date.now(),
+                Date.now() + 1,
               );
               return (
                 <article className="inventory-bike panel" key={b.id}>
                   <div className="inventory-bike-head">
                     <Bike size={33} />
-                    <span
-                      className={'badge ' + (active || block ? 'amber' : '')}
-                    >
-                      {active
-                        ? 'Checked out'
-                        : block
-                          ? 'Maintenance'
-                          : b.condition}
+                    <span className={'badge ' + (ready ? '' : 'amber')}>
+                      {ready} available now
                     </span>
                   </div>
-                  <h3>{b.id}</h3>
-                  <p>
-                    {catName(b.category)} · {sizeName(b.size)}
-                  </p>
-                  {block && (
-                    <p className="micro">
-                      {block.reason} through {dateTime(block.end)}
-                    </p>
-                  )}
+                  <h3>{catName(b.category)}</h3>
+                  <p>{sizeName(b.size)}</p>
+                  <dl className="stock-counts">
+                    <div>
+                      <dt>Total stock</dt>
+                      <dd>{b.quantity}</dd>
+                    </div>
+                    <div>
+                      <dt>Checked out</dt>
+                      <dd>{out}</dd>
+                    </div>
+                    <div>
+                      <dt>Maintenance now</dt>
+                      <dd>{downtime}</dd>
+                    </div>
+                  </dl>
                   <p className="micro">
-                    {
-                      state.bookings.filter(
+                    {state.bookings
+                      .filter(
                         (r) =>
-                          r.bikeIds.includes(b.id) && r.status === 'Confirmed',
-                      ).length
-                    }{' '}
-                    confirmed booking(s)
+                          lineQuantity(r.lines, b) > 0 &&
+                          r.status === 'Confirmed',
+                      )
+                      .reduce(
+                        (sum, r) => sum + lineQuantity(r.lines, b),
+                        0,
+                      )}{' '}
+                    bikes across confirmed reservations
                   </p>
                   <button
                     className="button outline small"
+                    aria-label={
+                      'Edit stock for ' +
+                      catName(b.category) +
+                      ' ' +
+                      sizeName(b.size)
+                    }
                     onClick={() => setBikeEditor(b.id)}
                   >
-                    Edit bike & downtime
+                    Edit stock & downtime
                   </button>
                 </article>
               );
@@ -346,7 +367,7 @@ export function Staff() {
       <Modal
         open={!!bikeEditor}
         close={() => setBikeEditor(null)}
-        title={bikeEditor === 'new' ? 'Add sample bike' : 'Bike & maintenance'}
+        title={bikeEditor === 'new' ? 'Add stock' : 'Stock & maintenance'}
       >
         {bikeEditor && (
           <BikeEditor
@@ -389,7 +410,7 @@ function ReservationRows({
                 <small>{b.source}</small>
               </TableCell>
               <TableCell>
-                <strong>{b.bikeIds.join(', ')}</strong>
+                <strong>{rideSummary(b.lines)}</strong>
                 <small>Pickup {dateTime(b.start)} ET</small>
                 <small>Return {dateTime(b.end)} ET</small>
               </TableCell>
@@ -456,8 +477,6 @@ function ReservationDetail({ booking: b }: { booking: Booking }) {
   const [reference, setReference] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [oldBike, setOldBike] = useState(b.bikeIds[0]);
-  const [newBike, setNewBike] = useState('');
   const [pending, setPending] = useState<BookingStatus | 'refund' | null>(null);
   function run(action: () => void, msg: string) {
     setError('');
@@ -469,17 +488,6 @@ function ReservationDetail({ booking: b }: { booking: Booking }) {
       setError((e as Error).message);
     }
   }
-  const candidates = state.bikes.filter((x) => {
-    const old = state.bikes.find((z) => z.id === oldBike);
-    return (
-      old &&
-      x.id !== oldBike &&
-      !b.bikeIds.includes(x.id) &&
-      x.category === old.category &&
-      x.size === old.size &&
-      isAvailable(state, x, b.start, b.end, b.id)
-    );
-  });
   return (
     <>
       <ErrorBox message={error} />
@@ -677,43 +685,6 @@ function ReservationDetail({ booking: b }: { booking: Booking }) {
               Email preview
             </button>
           </div>
-          {b.status === 'Confirmed' && (
-            <details className="assignment">
-              <summary>Bike assignments · {b.bikeIds.join(', ')}</summary>
-              <div className="two-col">
-                <Choice
-                  label="Replace assigned bike"
-                  value={oldBike}
-                  onChange={(v) => {
-                    setOldBike(v);
-                    setNewBike('');
-                  }}
-                  options={b.bikeIds}
-                />
-                <Choice
-                  label="Available replacement"
-                  value={newBike}
-                  onChange={setNewBike}
-                  options={[
-                    ['', 'Choose a bike'],
-                    ...candidates.map((x) => [x.id, x.id] as [string, string]),
-                  ]}
-                />
-              </div>
-              <button
-                className="button outline small"
-                disabled={!newBike}
-                onClick={() =>
-                  run(
-                    () => transact((s) => reassign(s, b.id, oldBike, newBike)),
-                    'Assignment changed. The shared calendar is updated.',
-                  )
-                }
-              >
-                Change assignment
-              </button>
-            </details>
-          )}
           <section className="history">
             <h3>Reservation history</h3>
             {b.history.map((h, i) => (
@@ -772,11 +743,15 @@ function ReservationDetail({ booking: b }: { booking: Booking }) {
 function BikeEditor({ id, onDone }: { id: string; onDone: () => void }) {
   const { state, transact } = useDemo();
   const existing = state.bikes.find((b) => b.id === id);
-  const [bike, setBike] = useState<BikeRecord>(
-    existing
-      ? { ...existing }
-      : { id: 'COM-M-03', category: 'comfort', size: 'M', condition: 'Ready' },
+  const [category, setCategory] = useState<Category>(
+    existing?.category || 'comfort',
   );
+  const [size, setSize] = useState(existing?.size || 'M');
+  const [quantity, setQuantity] = useState(String(existing?.quantity ?? 1));
+  const [downQuantity, setDownQuantity] = useState('1');
+  const currentStock =
+    state.bikes.find((b) => b.category === category && b.size === size)
+      ?.quantity || 0;
   const [startDate, setStartDate] = useState(dayPlus(1));
   const [startTime, setStartTime] = useState('10:00');
   const [endDate, setEndDate] = useState(dayPlus(1));
@@ -787,7 +762,22 @@ function BikeEditor({ id, onDone }: { id: string; onDone: () => void }) {
   function save() {
     setError('');
     try {
-      transact((s) => saveBike(s, bike, existing?.id));
+      const count = Number(quantity);
+      if (
+        !quantity.trim() ||
+        !Number.isInteger(count) ||
+        count < (existing ? 0 : 1)
+      )
+        throw Error(
+          'Enter a whole-number quantity' +
+            (existing ? ' of zero or more.' : ' of at least one.'),
+        );
+      transact((s) => {
+        const current =
+          s.bikes.find((b) => b.category === category && b.size === size)
+            ?.quantity || 0;
+        saveStock(s, category, size, existing ? count : current + count);
+      });
       onDone();
     } catch (e) {
       setError((e as Error).message);
@@ -801,49 +791,56 @@ function BikeEditor({ id, onDone }: { id: string; onDone: () => void }) {
           {message}
         </p>
       )}
-      <div className="two-col">
-        <Field
-          label="Bike ID"
-          value={bike.id}
-          readOnly={!!existing}
-          onChange={(e) =>
-            setBike({ ...bike, id: e.target.value.toUpperCase() })
-          }
-        />
-        <Choice
-          label="Sample category"
-          value={bike.category}
-          onChange={(v) => {
-            const c = CATEGORIES.find((c) => c.id === v)!;
-            setBike({ ...bike, category: c.id, size: c.sizes[0] });
-          }}
-          options={CATEGORIES.map((c) => [c.id, c.name])}
-        />
-        <Choice
-          label="Size"
-          value={bike.size}
-          onChange={(v) => setBike({ ...bike, size: v })}
-          options={CATEGORIES.find((c) => c.id === bike.category)!.sizes.map(
-            (s) => [s, sizeName(s)],
-          )}
-        />
-        <Choice
-          label="Condition"
-          value={bike.condition}
-          onChange={(v) => setBike({ ...bike, condition: v })}
-          options={['Ready', 'Needs inspection', 'Retired']}
-        />
-      </div>
+      {existing ? (
+        <h3>
+          {catName(category)} · {sizeName(size)}
+        </h3>
+      ) : (
+        <div className="two-col">
+          <Choice
+            label="Bike type"
+            value={category}
+            onChange={(v) => {
+              const c = CATEGORIES.find((c) => c.id === v)!;
+              setCategory(c.id);
+              setSize(c.sizes[0]);
+            }}
+            options={CATEGORIES.map((c) => [c.id, c.name])}
+          />
+          <Choice
+            label="Size"
+            value={size}
+            onChange={setSize}
+            options={CATEGORIES.find((c) => c.id === category)!.sizes.map(
+              (s) => [s, sizeName(s)],
+            )}
+          />
+        </div>
+      )}
+      <Field
+        label={existing ? 'Total in stock' : 'Quantity to add'}
+        type="number"
+        min={existing ? 0 : 1}
+        max={100}
+        step={1}
+        value={quantity}
+        onChange={(e) => setQuantity(e.target.value)}
+      />
+      <p className="micro">
+        {existing
+          ? 'Include all matching bikes, including those rented or in maintenance. Existing reservations are protected when you reduce stock.'
+          : `${currentStock} currently in stock. Added bikes join this same type and size.`}
+      </p>
       <button className="button" onClick={save}>
-        Save sample bike
+        {existing ? 'Save stock quantity' : 'Add to stock'}
       </button>
       {existing && (
         <>
           <hr />
           <h3>Schedule maintenance downtime</h3>
           <p className="micro">
-            Conflicting reservations must be reassigned or reviewed before
-            downtime can be saved.
+            Take a quantity out of service for these dates. The remaining stock
+            stays bookable; downtime cannot exceed available stock.
           </p>
           <div className="two-col">
             <Field
@@ -872,6 +869,15 @@ function BikeEditor({ id, onDone }: { id: string; onDone: () => void }) {
             />
           </div>
           <Field
+            label="Quantity in maintenance"
+            type="number"
+            min={1}
+            max={currentStock}
+            step={1}
+            value={downQuantity}
+            onChange={(e) => setDownQuantity(e.target.value)}
+          />
+          <Field
             label="Maintenance reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
@@ -888,6 +894,7 @@ function BikeEditor({ id, onDone }: { id: string; onDone: () => void }) {
                     at(startDate, startTime),
                     at(endDate, endTime),
                     reason,
+                    Number(downQuantity),
                   ),
                 );
                 setMessage(
@@ -905,7 +912,10 @@ function BikeEditor({ id, onDone }: { id: string; onDone: () => void }) {
               .filter((b) => b.bikeId === id)
               .map((block) => (
                 <div key={block.id}>
-                  <strong>{block.reason}</strong>
+                  <strong>
+                    {block.quantity} × {catName(category)} · {sizeName(size)}
+                  </strong>
+                  <p>{block.reason}</p>
                   <p>
                     {dateTime(block.start)} → {dateTime(block.end)} ET
                   </p>

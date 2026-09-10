@@ -1,6 +1,6 @@
 'use client';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { seed, localDate, type State } from '@/lib/demo-model';
+import { seed, restoreState, type State } from '@/lib/demo-model';
 type API = {
   state: State;
   transact: <T>(fn: (draft: State) => T) => T;
@@ -17,9 +17,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     try {
       const raw = sessionStorage.getItem(key);
       if (raw) {
-        const saved = JSON.parse(raw);
-        if (saved.version === 3 && saved.seedDay === localDate())
-          initial = saved;
+        initial = restoreState(JSON.parse(raw));
       }
     } catch {
       setStorageError(true);

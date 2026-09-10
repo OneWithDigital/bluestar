@@ -6,13 +6,13 @@ This is a fictional-data layout and interaction example, with pay at pickup thro
 
 ## Route guide
 
-| Route                  | What to try                                                                                                                                                                               |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| /                      | Coffee and cycling homepage. Date/time/duration entry, sample bike categories, sample café menu, visit details.                                                                           |
-| /rent                  | Choose one or more bikes and sizes, enter fictional contact details, acknowledge the sample policy, and confirm.                                                                          |
-| /reservation/{demo-id} | Open the link created by a booking. Check the ride, amount due, payment status and matching email preview.                                                                                |
-| /staff-demo            | Today, Reservations, Bikes, Prices & hours, and Website content. Open a reservation to record payment, check out, return, edit, reassign, cancel, mark no-show or simulate a full refund. |
-| /partner-demo          | Fictional lodging partner with a booking button and compact widget. Both retain the partner source and use the same sample fleet.                                                         |
+| Route                  | What to try                                                                                                                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| /                      | Coffee and cycling homepage. Date/time/duration entry, sample bike categories, sample café menu, visit details.                                                                            |
+| /rent                  | Choose one or more bikes and sizes, enter fictional contact details, acknowledge the sample policy, and confirm.                                                                           |
+| /reservation/{demo-id} | Open the link created by a booking. Check the ride, amount due, payment status and matching email preview.                                                                                 |
+| /staff-demo            | Today, Reservations, Bikes, Prices & hours, and Website content. Open a reservation to record payment, check out, return, edit quantities, cancel, mark no-show or simulate a full refund. |
+| /partner-demo          | Fictional lodging partner with a booking button and compact widget. Both retain the partner source and use the same sample fleet.                                                          |
 
 Use the reviewer bar to switch views, preview full payment or a sample 20% booking deposit, and reset the demo. Keep your review in one browser tab. Customer and staff changes share that tab’s session storage; separate tabs, browsers and people do not share a production database. Returning on a later Eastern calendar day starts fresh fixtures.
 
@@ -23,7 +23,7 @@ Use the reviewer bar to switch views, preview full payment or a sample 20% booki
 3. Open the reservation in Staff demo. Record a simulated pickup payment; reservation status stays Confirmed while payment changes to Paid.
 4. Use today’s seeded rental to test checkout/return. A future reservation cannot be checked out before its pickup time. Bikes already out remain blocked until staff record return, followed by turnaround.
 5. Try changing the date, duration, size or quantity. Prices recalculate and unavailable selections are rejected.
-6. Try maintenance downtime on a booked bike. The message names the conflicting reservation; reassign it to an available equivalent bike or change the downtime.
+6. In Bikes, edit stock for a type and size, for example Comfort bike / Large to 6 total. Reserve 4 together and verify that 2 remain available for the same time. Add stock to the same group without creating individual bike entries. Schedule downtime for a quantity of bikes; only that quantity is blocked. Reductions below committed reservations or maintenance are rejected.
 7. Select Payment preview → 20% deposit or Full payment. Try failure, cancellation and success. Failed/cancelled checkout creates no reservation. Successful checkout rechecks bikes before confirming.
 8. Use the partner widget and find “Example lodging partner” in Staff demo.
 9. Edit sample prices, hours or café text, then revisit the customer site. Reset when finished.
@@ -31,8 +31,8 @@ Use the reviewer bar to switch views, preview full payment or a sample 20% booki
 ## What is simulated or limited
 
 - Fleet, sizes, prices, people, booking IDs, payment records and operating rules are fictional fixtures. Sample prices exclude any applicable taxes.
-- The sample fleet has 12 bikes across Comfort, Step through e-bike and Hybrid categories, with the counts and rates specified in the handoff.
-- Reservations, staff edits, inventory assignments and history work locally in the browser session. This does not prove safe concurrent booking across devices or users.
+- The starting sample fleet has 12 bikes in six type-and-size stock groups (2 per group), across Comfort, Step through e-bike and Hybrid categories. Each group has an editable total quantity, up to 100 for this demo. Matching bikes are interchangeable; there are no individual bike assignments. This follows the later request for quantities in place of the original handoff assumption about individual bikes.
+- Reservations, staff edits, stock quantities and history work locally in the browser session. This does not prove safe concurrent booking across devices or users.
 - DripOS is not contacted. “Record pickup payment” records a demo event only; there is no automatic synchronization or reconciliation.
 - Online checkout never requests card data and has no processor integration. There are no temporary checkout holds; availability is checked again on successful simulation. Failure/abandonment leaves no held inventory.
 - The deposit is a sample 20% booking deposit, not a refundable damage deposit. Staff refund simulation refunds the entire recorded payment; partial refunds are not implemented.
@@ -46,7 +46,7 @@ Use the reviewer bar to switch views, preview full payment or a sample 20% booki
 
 ## Production questions
 
-- What are the actual bike models, physical fleet IDs, quantities, sizes, maintenance rules and rental inclusions?
+- What are the actual bike models, grouped quantities, sizes, maintenance rules and rental inclusions?
 - What are the rental rates, durations, taxes, deposit choices, pickup windows, turnaround time and closure dates?
 - What are the approved café menu, café hours, rental hours, contact details and business photos?
 - What rules govern pickup, late returns, cancellation, no-shows, refunds, rider eligibility and rental agreements?
@@ -59,7 +59,7 @@ Use the reviewer bar to switch views, preview full payment or a sample 20% booki
 
 ## Validation
 
-The production build and TypeScript check passed. Thirteen focused behavior checks cover Eastern time, physical allocation, quantities, availability conflicts, turnaround, cancellation, no-show, returns, maintenance, changed bookings, deposit/payment status, closure settings and invalid dates.
+The production build and TypeScript check passed. Twenty-one focused behavior checks cover shared stock quantities, peak concurrent demand, larger group bookings, stock reductions, partial maintenance, duplicate selections, migration of existing demo sessions, Eastern time, turnaround, cancellation, no-show, returns, changed bookings, deposit/payment status, closure settings and invalid dates.
 
 Browser review verified a two-bike customer reservation, matching email preview, the same booking in staff, recorded pickup payment, partner form selection carry-through, shared reduced availability, and simulated deposit failure/cancellation/success. Mobile layouts were checked at a 390px viewport; desktop booking controls were visible in the first 1440×900 screen. Both WebMCP tools were checked with valid and invalid inputs.
 
