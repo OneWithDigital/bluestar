@@ -7,7 +7,6 @@ import {
   Bike,
   Coffee,
   MapPin,
-  Star,
   Menu,
   X,
 } from 'lucide-react';
@@ -22,8 +21,14 @@ export const DEFAULT_CONTENT = {
 export function Brand() {
   return (
     <a href="/" className="brand" aria-label="Blue Star Barns home">
-      <Star fill="currentColor" size={28} />
-      <span>
+      <img
+        className="brand-logo"
+        src="/blue-star-barns-logo.jpg"
+        alt="Blue Star Barns — good coffee, cool bikes, Saugatuck"
+        width={500}
+        height={500}
+      />
+      <span className="brand-name" aria-hidden="true">
         Blue Star Barns<small>COFFEE & BIKES · SAUGATUCK, MI</small>
       </span>
     </a>

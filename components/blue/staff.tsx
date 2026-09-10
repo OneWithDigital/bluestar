@@ -11,7 +11,6 @@ import {
   Plus,
   ArrowUpRight,
   Clock,
-  Star,
   CheckCircle2,
 } from 'lucide-react';
 import {
@@ -114,11 +113,15 @@ export function Staff() {
     <SidebarProvider className="staff-shell">
       <Sidebar collapsible="none" className="staff-sidebar">
         <SidebarHeader>
-          <a className="staff-brand" href="/">
-            <Star fill="currentColor" size={25} />
-            <span>
-              Blue Star Barns<small>THE BIKE DESK</small>
-            </span>
+          <a className="staff-brand" href="/" aria-label="Blue Star Barns home">
+            <img
+              className="brand-logo"
+              src="/blue-star-barns-logo.jpg"
+              alt="Blue Star Barns — good coffee, cool bikes, Saugatuck"
+              width={500}
+              height={500}
+            />
+            <small>THE BIKE DESK</small>
           </a>
         </SidebarHeader>
         <SidebarContent>

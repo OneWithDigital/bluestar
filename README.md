@@ -29,6 +29,7 @@ The dev command prints its local URL. The Sites production build outputs a Cloud
 - lib/demo-model.ts: pure fictional fixtures, time conversion, allocation and business rules, separate from presentation.
 - scripts/demo-contracts.mjs: meaningful model behavior checks, no external services.
 - public/lifestyle.png: generated illustrative photography, not an actual storefront.
+- public/blue-star-barns-logo.jpg: user-supplied original Blue Star Barns logo, preserved without cropping or alteration.
 - .openai/hosting.json: private Sites project binding. Contains no credential.
 
 ## Demo storage and production boundary
@@ -38,4 +39,3 @@ State uses one browser tab’s sessionStorage and resets on a later Eastern day.
 The intended production host is Hostinger. A production implementation needs a suitable runtime/database, server-enforced inventory transactions and authentication, SMTP integration for booking notices, optional consent-based Reach integration, scheduled jobs, backups, payment verification if enabled, and operational monitoring. Do not assume this Worker build is compatible with an arbitrary Hostinger hosting plan.
 
 No credential, secret, email service, payment processor or production inventory is included. Do not enter real customer details.
-

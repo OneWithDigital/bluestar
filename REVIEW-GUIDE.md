@@ -6,13 +6,13 @@ This is a fictional-data layout and interaction example, with pay at pickup thro
 
 ## Route guide
 
-| Route | What to try |
-| --- | --- |
-| / | Coffee and cycling homepage. Date/time/duration entry, sample bike categories, sample café menu, visit details. |
-| /rent | Choose one or more bikes and sizes, enter fictional contact details, acknowledge the sample policy, and confirm. |
-| /reservation/{demo-id} | Open the link created by a booking. Check the ride, amount due, payment status and matching email preview. |
-| /staff-demo | Today, Reservations, Bikes, Prices & hours, and Website content. Open a reservation to record payment, check out, return, edit, reassign, cancel, mark no-show or simulate a full refund. |
-| /partner-demo | Fictional lodging partner with a booking button and compact widget. Both retain the partner source and use the same sample fleet. |
+| Route                  | What to try                                                                                                                                                                               |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| /                      | Coffee and cycling homepage. Date/time/duration entry, sample bike categories, sample café menu, visit details.                                                                           |
+| /rent                  | Choose one or more bikes and sizes, enter fictional contact details, acknowledge the sample policy, and confirm.                                                                          |
+| /reservation/{demo-id} | Open the link created by a booking. Check the ride, amount due, payment status and matching email preview.                                                                                |
+| /staff-demo            | Today, Reservations, Bikes, Prices & hours, and Website content. Open a reservation to record payment, check out, return, edit, reassign, cancel, mark no-show or simulate a full refund. |
+| /partner-demo          | Fictional lodging partner with a booking button and compact widget. Both retain the partner source and use the same sample fleet.                                                         |
 
 Use the reviewer bar to switch views, preview full payment or a sample 20% booking deposit, and reset the demo. Keep your review in one browser tab. Customer and staff changes share that tab’s session storage; separate tabs, browsers and people do not share a production database. Returning on a later Eastern calendar day starts fresh fixtures.
 
@@ -40,7 +40,7 @@ Use the reviewer bar to switch views, preview full payment or a sample 20% booki
 - Cancellation and no-show immediately release demo inventory; refund status is a separate action. Final cancellation/no-show rules remain a business decision.
 - Staff demo is deliberately open inside the private review Site. It has no independent staff authentication, roles, audit security or production database.
 - The partner widget is an in-page layout and referral demonstration. A real cross-domain embed, commission accounting and partner payouts are not implemented.
-- The generated lifestyle photo is illustrative, not an actual Blue Star Barns property or product photo. The text wordmark and star are provisional, not the official logo. Category cards use neutral bicycle icons rather than claims about actual models.
+- The supplied Blue Star Barns bird-and-handlebars logo appears in the customer header, footer, partner page and staff sidebar. Its original JPEG is included in the source. The generated lifestyle photo is illustrative, not an actual property or product photo. Category cards use neutral bicycle icons rather than claims about actual models.
 - The Visit section intentionally leaves coffee hours and bike hours separate and unconfirmed.
 - The source uses the current Sites/Vinext Worker build. It is not a ready-to-upload Hostinger production package.
 
@@ -48,7 +48,7 @@ Use the reviewer bar to switch views, preview full payment or a sample 20% booki
 
 - What are the actual bike models, physical fleet IDs, quantities, sizes, maintenance rules and rental inclusions?
 - What are the rental rates, durations, taxes, deposit choices, pickup windows, turnaround time and closure dates?
-- What are the approved café menu, café hours, rental hours, contact details, photos and logo?
+- What are the approved café menu, café hours, rental hours, contact details and business photos?
 - What rules govern pickup, late returns, cancellation, no-shows, refunds, rider eligibility and rental agreements?
 - Which Hostinger plan will support the chosen runtime, database, scheduled jobs, backups and expected traffic?
 - Which authenticated Hostinger SMTP mailbox will send transactional confirmations, changed-booking notices, cancellations and reminders, and are its limits suitable?
@@ -66,6 +66,5 @@ Browser review verified a two-bike customer reservation, matching email preview,
 ## Content sources
 
 Business identity, address and coffee/bike positioning were checked against the [Saugatuck Douglas tourism listing](https://saugatuck.com/business/blue-star-barns/). Facebook content was unavailable through the reference fetch, so no private or inaccessible posts were used. The supplied handoff remains the source for the fictional fixtures and production preferences.
-
 
 Validation limit: 200% browser/text zoom was not verified because the available browser control did not accept zoom shortcuts. Mobile dimensions, keyboard dialog dismissal and the tested form journeys were checked. Production accessibility review is still required.
