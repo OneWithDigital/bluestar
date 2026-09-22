@@ -59,6 +59,7 @@ import {
   money,
   paymentStatus,
   due,
+  needsPolicyReview,
   recordPayment,
   refund,
   changeStatus,
@@ -241,6 +242,7 @@ export function Staff() {
                       b.status === 'Confirmed' &&
                       localDate(b.start) > localDate(),
                   )
+                  .sort((a, b) => a.start - b.start)
                   .slice(0, 4)}
                 open={setSelected}
               />
@@ -436,7 +438,11 @@ function ReservationRows({
                 >
                   {paymentStatus(b)}
                 </span>
-                <small>{money(due(b))} due</small>
+                <small>
+                  {needsPolicyReview(b)
+                    ? 'Policy review needed'
+                    : money(due(b)) + ' due'}
+                </small>
               </TableCell>
               <TableCell>
                 <button
@@ -603,8 +609,19 @@ function ReservationDetail({ booking: b }: { booking: Booking }) {
             >
               {paymentStatus(b)}
             </span>
-            <strong>{money(due(b))} due</strong>
+            <strong>
+              {needsPolicyReview(b)
+                ? 'Policy review needed'
+                : money(due(b)) + ' due'}
+            </strong>
           </div>
+          {needsPolicyReview(b) && (
+            <p className="micro">
+              No pickup is scheduled. The balance below is the unadjusted rental
+              amount, not a cancellation charge. Review the final policy and any
+              refund separately.
+            </p>
+          )}
           {b.paid - b.refunded > b.total && (
             <p className="error">
               Recorded payment exceeds the revised price by{' '}

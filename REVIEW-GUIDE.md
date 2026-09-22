@@ -61,6 +61,8 @@ Use the reviewer bar to switch views, preview full payment or a sample 20% booki
 
 ## Validation
 
+September 21 follow-up: see [SITE-REVIEW-2026-09-21.md](SITE-REVIEW-2026-09-21.md) for the current review, five functional corrections, additional regression tests, and prioritized ideas. The current model suite has 25 checks. Editable source and setup instructions are in the private [GitHub repository](https://github.com/OneWithDigital/bluestar).
+
 The Hostinger deployment was verified on September 9, 2026 (Eastern): the separate static build and TypeScript check passed, all 21 model checks passed, and all five routes served the new application over validated HTTPS. A live two-bike booking confirmed the correct unpaid pickup balance and appeared in staff with matching quantities and details. The Hostinger homepage had no horizontal overflow at 390px; all images loaded and the intended fonts were applied. Test data was reset afterward. See HOSTINGER-DEPLOYMENT.md for the build and deployment details.
 
 The production build and TypeScript check passed. Twenty-one focused behavior checks cover shared stock quantities, peak concurrent demand, larger group bookings, stock reductions, partial maintenance, duplicate selections, migration of existing demo sessions, Eastern time, turnaround, cancellation, no-show, returns, changed bookings, deposit/payment status, closure settings and invalid dates.

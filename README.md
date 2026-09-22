@@ -2,21 +2,24 @@
 
 Interactive review example built with the Sites scaffold, Vinext, React, TypeScript and the installed Shadcn/Base UI controls. A separate static build publishes the same demo on Hostinger.
 
+Live demonstration: https://bluestar.onewithdigital.com/
+
+Source repository: https://github.com/OneWithDigital/bluestar (private).
+
 See [REVIEW-GUIDE.md](REVIEW-GUIDE.md) for routes, reviewer scenarios, limitations and production questions. The original brief is in HANDOFF.md.
 
 ## Run locally
 
-Use Node.js 22.13 or later and the committed npm lockfile.
+Use Node.js 24 LTS or later and the committed npm lockfile. No Hostinger, email, payment, or Sites credential is needed for the Hostinger development build.
 
 ```sh
 npm ci
-npm run dev
-npm run build
-npx tsc --noEmit
-node --experimental-strip-types scripts/demo-contracts.mjs
+npm run dev:hostinger
 ```
 
-The dev command prints its local URL. The Sites production build outputs a Cloudflare-compatible Worker plus static client assets. There are no booking, email or payment API calls.
+The dev command prints its local URL and reloads when source files change. Run `npm run check` before publishing: it runs the behavior checks, TypeScript check, and Hostinger build. See [EDITING.md](EDITING.md) for the editing workflow and [SITE-REVIEW-2026-09-21.md](SITE-REVIEW-2026-09-21.md) for the latest review and improvement ideas.
+
+The original `npm run dev` and `npm run build` commands remain for Sites/Vinext. That production build outputs a Cloudflare-compatible Worker plus static client assets. There are no booking, email or payment API calls.
 
 ## Hostinger build
 
@@ -24,6 +27,8 @@ The dev command prints its local URL. The Sites production build outputs a Cloud
 npm run build:hostinger
 npm run preview:hostinger
 ```
+
+`npm run package:hostinger` rebuilds the demo and creates a ready-to-upload ZIP in the ignored `artifacts/` folder on Windows, macOS or Linux. It includes `.htaccess` at the archive root. Packaging does not deploy anything or use a credential.
 
 Upload the contents of `dist-hostinger/` to the `bluestar.onewithdigital.com` document root, with `index.html` and `.htaccess` at that root. Include the dotfile: it sends direct links such as `/rent`, `/staff-demo`, `/partner-demo`, and `/reservation/{demo-id}` to the same app. The source tree, package files, Sites Worker, and connector credentials are not part of this upload.
 

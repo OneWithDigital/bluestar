@@ -491,4 +491,85 @@ check(
     assert.equal(restoreState(JSON.parse(JSON.stringify(s)), now).version, 4);
   },
 );
+check('earlier closing cannot strand an existing all-day booking', () => {
+  const s = make();
+  s.bookings = [];
+  const b = createBooking(
+    s,
+    { ...slot, duration: 'day' },
+    lines,
+    contact,
+    'Website',
+    'pickup',
+    false,
+    now,
+  );
+  const before = structuredClone(s.settings);
+  assert.throws(
+    () => saveSettings(s, { ...before, close: '17:00' }),
+    /conflict/,
+  );
+  assert.deepEqual(s.settings, before);
+  assert.equal(b.end, at(slot.date, '18:00'));
+  saveSettings(s, { ...before, close: '19:00' });
+  assert.equal(b.end, at(slot.date, '18:00'));
+});
+check('invalid clock minutes and midnight overflow are rejected', () => {
+  const s = make();
+  s.bookings = [];
+  for (const time of ['10:99', '17:60', '24:00']) {
+    assert.ok(Number.isNaN(at(slot.date, time)));
+    assert.throws(() => saveSettings(s, { ...s.settings, open: time }));
+    assert.throws(() => saveSettings(s, { ...s.settings, close: time }));
+  }
+});
+check('decimal rates and partial payments settle exactly to the cent', () => {
+  for (const rate of [0.29, 9.95, 19.95, 39.95]) {
+    const s = make();
+    saveStock(s, 'comfort', 'L', 3, now);
+    s.settings.rates.comfort['2'] = rate;
+    const b = createBooking(
+      s,
+      slot,
+      [{ ...lines[0], qty: 3 }],
+      contact,
+      'Website',
+      'pickup',
+      false,
+      now,
+    );
+    const expected = (Math.round(rate * 100) * 3) / 100;
+    assert.equal(b.total, expected);
+    recordPayment(s, b.id, 0.1, '', now);
+    recordPayment(s, b.id, 0.2, '', now);
+    assert.equal(b.paid, 0.3);
+    recordPayment(s, b.id, due(b), '', now);
+    assert.equal(b.paid, expected);
+    assert.equal(due(b), 0);
+    assert.equal(paymentStatus(b), 'Paid');
+    changeStatus(s, b.id, 'Checked out', b.start);
+    refund(s, b.id, now);
+    assert.equal(paymentStatus(b), 'Refunded');
+  }
+});
+check(
+  'legacy floating-point payment residues do not leave phantom balances',
+  () => {
+    const s = make();
+    const b = createBooking(
+      s,
+      slot,
+      lines,
+      contact,
+      'Website',
+      'pickup',
+      false,
+      now,
+    );
+    b.total = 119.85000000000001;
+    b.paid = 119.85;
+    assert.equal(due(b), 0);
+    assert.equal(paymentStatus(b), 'Paid');
+  },
+);
 console.log(`${checks} behavior checks passed`);

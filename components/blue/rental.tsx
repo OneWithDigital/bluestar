@@ -33,6 +33,8 @@ import {
   demoContact,
   paymentStatus,
   due,
+  balanceLabel,
+  needsPolicyReview,
   type Slot,
   type Line,
   type State,
@@ -249,7 +251,7 @@ export function Summary({
             <strong>{money(booking.paid - booking.refunded)}</strong>
           </div>
           <div className="summary-row">
-            <span>Due at pickup</span>
+            <span>{balanceLabel(booking)}</span>
             <strong>{money(due(booking))}</strong>
           </div>
         </>
@@ -701,15 +703,23 @@ export function Confirmation({ id }: { id: string }) {
           <div className="stack">
             <section className="panel">
               <h3>
-                {b.paymentMode === 'pickup'
-                  ? 'Pay at pickup through DripOS'
-                  : b.paymentMode === 'deposit'
-                    ? 'Simulated booking deposit recorded'
-                    : 'Simulated online payment recorded'}
+                {needsPolicyReview(b)
+                  ? 'No pickup is scheduled'
+                  : b.paymentMode === 'pickup'
+                    ? 'Pay at pickup through DripOS'
+                    : b.paymentMode === 'deposit'
+                      ? 'Simulated booking deposit recorded'
+                      : 'Simulated online payment recorded'}
               </h3>
               <p className="muted">
-                Due at pickup: <strong>{money(due(b))}</strong>
+                {balanceLabel(b)}: <strong>{money(due(b))}</strong>
               </p>
+              {needsPolicyReview(b) && (
+                <p className="micro">
+                  This is the unadjusted rental balance, not a cancellation
+                  charge. Staff must review the final policy and any refund.
+                </p>
+              )}
               <p className="micro">
                 Pickup {dateTime(b.start)} ET.
                 <br />
@@ -775,8 +785,14 @@ export function EmailPreview({ booking: b }: { booking: Booking }) {
       <p>
         <strong>Payment:</strong> {paymentStatus(b)}
         <br />
-        <strong>Due at pickup:</strong> {money(due(b))}
+        <strong>{balanceLabel(b)}:</strong> {money(due(b))}
       </p>
+      {needsPolicyReview(b) && (
+        <p>
+          No pickup is scheduled. The unadjusted rental balance requires policy
+          review; it is not a cancellation charge.
+        </p>
+      )}
       <p className="micro">
         Website preview — sample prices and availability. No real reservations
         or payments. No email was sent.

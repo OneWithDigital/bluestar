@@ -42,6 +42,8 @@ export const sizeName = (s: string) =>
   ] || s;
 export const catName = (s: string) =>
   CATEGORIES.find((c) => c.id === s)?.name || s;
+const cents = (amount: number) => Math.round((amount + Number.EPSILON) * 100);
+const validTime = (time: string) => /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time);
 export const money = (n: number) =>
   new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -61,8 +63,7 @@ export function dayPlus(n: number, now = Date.now()) {
   return d.toISOString().slice(0, 10);
 }
 export function at(date: string, time: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time))
-    return NaN;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !validTime(time)) return NaN;
   const wall = Date.parse(date + 'T' + time + ':00Z');
   if (
     !Number.isFinite(wall) ||
@@ -486,9 +487,11 @@ export function availability(
   );
 }
 export function totalFor(s: State, lines: Line[], duration: Duration) {
-  return lines.reduce(
-    (a, l) => a + s.settings.rates[l.category][duration] * l.qty,
-    0,
+  return (
+    lines.reduce(
+      (a, l) => a + cents(s.settings.rates[l.category][duration]) * l.qty,
+      0,
+    ) / 100
   );
 }
 export function assign(
@@ -565,7 +568,7 @@ export function createBooking(
     mode === 'full'
       ? total
       : mode === 'deposit'
-        ? Math.round(total * 0.2 * 100) / 100
+        ? Math.round(cents(total) * 0.2) / 100
         : 0;
   const id = 'BS-DEMO-' + (104 + s.bookings.length) + '-' + (s.revision + 1);
   const b: Booking = {
@@ -625,11 +628,20 @@ export function getBooking(s: State, id: string) {
   return b;
 }
 export function paymentStatus(b: Booking) {
-  const net = b.paid - b.refunded;
+  const net = cents(b.paid) - cents(b.refunded);
   if (b.refunded > 0 && net <= 0) return 'Refunded';
-  return net >= b.total ? 'Paid' : net > 0 ? 'Part paid' : 'Unpaid';
+  return net >= cents(b.total) ? 'Paid' : net > 0 ? 'Part paid' : 'Unpaid';
 }
-export const due = (b: Booking) => Math.max(0, b.total - b.paid + b.refunded);
+export const due = (b: Booking) =>
+  Math.max(0, cents(b.total) - cents(b.paid) + cents(b.refunded)) / 100;
+export const needsPolicyReview = (b: Booking) =>
+  ['Cancelled', 'No-show'].includes(b.status);
+export const balanceLabel = (b: Booking) =>
+  needsPolicyReview(b)
+    ? 'Rental balance · policy review'
+    : b.status === 'Returned'
+      ? 'Remaining rental balance'
+      : 'Due at pickup';
 export function recordPayment(
   s: State,
   id: string,
@@ -640,9 +652,15 @@ export function recordPayment(
   const b = getBooking(s, id);
   if (!['Confirmed', 'Checked out'].includes(b.status))
     throw Error('Payments can only be recorded for active rentals.');
-  if (!Number.isFinite(amount) || amount <= 0 || amount > due(b))
+  const amountCents = cents(amount);
+  if (
+    !Number.isFinite(amount) ||
+    amountCents <= 0 ||
+    Math.abs(amount - amountCents / 100) > 0.0000001 ||
+    amountCents > cents(due(b))
+  )
     throw Error('Enter an amount above zero and no more than the balance due.');
-  b.paid += amount;
+  b.paid = (cents(b.paid) + amountCents) / 100;
   b.history.push({
     at: now,
     event:
@@ -653,7 +671,7 @@ export function recordPayment(
 }
 export function refund(s: State, id: string, now = Date.now()) {
   const b = getBooking(s, id);
-  const net = b.paid - b.refunded;
+  const net = (cents(b.paid) - cents(b.refunded)) / 100;
   if (net <= 0) throw Error('There is no recorded payment to refund.');
   b.refunded = b.paid;
   b.history.push({
@@ -787,8 +805,8 @@ export function saveStock(
 }
 export function saveSettings(s: State, next: Settings) {
   if (
-    !/^\d{2}:\d{2}$/.test(next.open) ||
-    !/^\d{2}:\d{2}$/.test(next.close) ||
+    !validTime(next.open) ||
+    !validTime(next.close) ||
     next.open >= next.close ||
     next.open < '06:00' ||
     next.close > '23:00' ||
@@ -811,6 +829,9 @@ export function saveSettings(s: State, next: Settings) {
   )) {
     try {
       slotInterval(candidate, b, Date.now(), true);
+      // Existing day rentals keep their promised return time when hours change.
+      if (b.end > at(b.date, next.close))
+        throw Error('The booked return is after the proposed closing time.');
     } catch {
       throw Error(
         'Settings conflict with ' +
