@@ -288,7 +288,14 @@ export function Rental() {
     const cat = CATEGORIES.find((c) => c.id === params.get('category'));
     return cat ? [{ category: cat.id, size: cat.sizes[0], qty: 1 }] : [];
   });
-  const [contact, setContact] = useState<Contact>({ ...demoContact });
+  const [contact, setContact] = useState<Contact>({
+    name: '',
+    email: '',
+    phone: '',
+    notes: '',
+    policy: false,
+    marketing: false,
+  });
   const [step, setStep] = useState(0);
   const [error, setError] = useState('');
   const [checkout, setCheckout] = useState(false);
@@ -331,6 +338,7 @@ export function Rental() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e) {
       setError((e as Error).message);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
   async function confirm(paid = false) {
@@ -435,6 +443,7 @@ export function Rental() {
                   <Field
                     label="Name"
                     autoComplete="off"
+                    placeholder={demoContact.name}
                     value={contact.name}
                     onChange={(e) => field('name', e.target.value)}
                     required
@@ -443,6 +452,7 @@ export function Rental() {
                     label="Email"
                     type="email"
                     autoComplete="off"
+                    placeholder={demoContact.email}
                     value={contact.email}
                     onChange={(e) => field('email', e.target.value)}
                     required
@@ -451,6 +461,7 @@ export function Rental() {
                     label="Phone"
                     type="tel"
                     autoComplete="off"
+                    placeholder={demoContact.phone}
                     value={contact.phone}
                     onChange={(e) => field('phone', e.target.value)}
                     required
