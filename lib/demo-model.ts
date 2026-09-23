@@ -358,6 +358,43 @@ export function restoreState(raw: unknown, now = Date.now()): State {
     }
   return next;
 }
+export function walkInSlot(
+  s: State,
+  now = Date.now(),
+  pickupNow = false,
+): Slot {
+  if (pickupNow) {
+    const date = localDate(now);
+    const time = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'America/Detroit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).format(now);
+    return {
+      date,
+      time,
+      duration: now + 2 * 3600000 <= at(date, s.settings.close) ? '2' : 'day',
+    };
+  }
+  // Scheduled pickups begin on the next minute instead of in the past.
+  const nextMinute = (Math.floor(now / 60000) + 1) * 60000;
+  for (let offset = 0; offset <= s.settings.closures.length + 1; offset++) {
+    const date = dayPlus(offset, now);
+    if (s.settings.closures.includes(date)) continue;
+    const start = Math.max(at(date, s.settings.open), nextMinute);
+    const close = at(date, s.settings.close);
+    if (start >= close) continue;
+    const time = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'America/Detroit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).format(start);
+    return { date, time, duration: start + 2 * 3600000 <= close ? '2' : 'day' };
+  }
+  throw Error('No open pickup date is available. Review the sample hours.');
+}
 export function slotInterval(
   s: State,
   slot: Slot,
@@ -599,6 +636,29 @@ export function createBooking(
   };
   s.bookings.push(b);
   return b;
+}
+export function createWalkInBooking(
+  s: State,
+  slot: Slot,
+  lines: Line[],
+  contact: Contact,
+  pickupNow: boolean,
+  now = Date.now(),
+) {
+  const effectiveSlot = pickupNow
+    ? { ...walkInSlot(s, now, true), duration: slot.duration }
+    : slot;
+  // Staff can start in the current minute; customer past-time guards stay strict.
+  return createBooking(
+    s,
+    effectiveSlot,
+    lines,
+    contact,
+    'Walk-in',
+    'pickup',
+    false,
+    pickupNow ? Math.floor(now / 60000) * 60000 : now,
+  );
 }
 export function updateBooking(
   s: State,

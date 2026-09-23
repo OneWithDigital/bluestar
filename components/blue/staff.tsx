@@ -40,7 +40,7 @@ import {
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
 import { useDemo } from './store';
-import { Field, Choice, Modal, TextArea, ErrorBox } from './ui';
+import { Field, Choice, Check, Modal, TextArea, ErrorBox } from './ui';
 import {
   Schedule,
   BikePicker,
@@ -70,6 +70,9 @@ import {
   availableCount,
   lineQuantity,
   rideSummary,
+  walkInSlot,
+  createWalkInBooking,
+  demoContact,
   type Booking,
   type BookingStatus,
   type Slot,
@@ -78,6 +81,7 @@ import {
   type Duration,
   type Settings,
   type Content,
+  type Contact,
 } from '@/lib/demo-model';
 const tabs = [
   { id: 'today', label: 'Today', icon: CalendarDays },
@@ -92,6 +96,7 @@ export function Staff() {
   const [tab, setTab] = useState('today');
   const [selected, setSelected] = useState<string | null>(null);
   const [bikeEditor, setBikeEditor] = useState<string | null>(null);
+  const [walkInOpen, setWalkInOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All statuses');
   useEffect(() => {
@@ -166,9 +171,9 @@ export function Staff() {
             </p>
           </div>
           {['today', 'reservations'].includes(tab) && (
-            <a href="/rent?source=Walk-in" className="button">
+            <button className="button" onClick={() => setWalkInOpen(true)}>
               <Plus size={19} /> Add a walk-in
-            </a>
+            </button>
           )}
           {tab === 'bikes' && (
             <button className="button" onClick={() => setBikeEditor('new')}>
@@ -215,7 +220,7 @@ export function Staff() {
             </div>
             <section className="staff-section">
               <div className="row-heading">
-                <h2>At the bike desk</h2>
+                <h2>Today’s pickups & active rentals</h2>
                 <span>{localDate()}</span>
               </div>
               <ReservationRows
@@ -354,6 +359,22 @@ export function Staff() {
         )}
       </main>
       <Modal
+        open={walkInOpen}
+        close={() => setWalkInOpen(false)}
+        title="Add a walk-in"
+        description="Book at the desk using the same availability as the customer site. Use fictional rider details for this demo."
+      >
+        {walkInOpen && (
+          <WalkInForm
+            cancel={() => setWalkInOpen(false)}
+            onCreated={(id) => {
+              setWalkInOpen(false);
+              setSelected(id);
+            }}
+          />
+        )}
+      </Modal>
+      <Modal
         open={!!selectedBooking}
         close={() => setSelected(null)}
         title={selectedBooking?.id || 'Reservation'}
@@ -380,6 +401,163 @@ export function Staff() {
         )}
       </Modal>
     </SidebarProvider>
+  );
+}
+function WalkInForm({
+  cancel,
+  onCreated,
+}: {
+  cancel: () => void;
+  onCreated: (id: string) => void;
+}) {
+  const { state, transact } = useDemo();
+  const [pickupNow, setPickupNow] = useState(
+    () =>
+      !state.settings.closures.includes(localDate()) &&
+      Date.now() >= at(localDate(), state.settings.open) &&
+      Date.now() < at(localDate(), state.settings.close),
+  );
+  const [slot, setSlot] = useState<Slot>(() =>
+    walkInSlot(state, Date.now(), pickupNow),
+  );
+  const currentSlot = pickupNow
+    ? { ...walkInSlot(state, Date.now(), true), duration: slot.duration }
+    : slot;
+  const [lines, setLines] = useState<Line[]>([]);
+  const [contact, setContact] = useState<Contact>({
+    name: '',
+    email: '',
+    phone: '',
+    notes: '',
+    policy: false,
+    marketing: false,
+  });
+  const [error, setError] = useState('');
+  function save() {
+    setError('');
+    try {
+      const booking = transact((s) =>
+        createWalkInBooking(s, slot, lines, contact, pickupNow),
+      );
+      onCreated(booking.id);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+  return (
+    <div className="walk-in-form">
+      <section>
+        <h3>Choose bikes & pickup time</h3>
+        <Check
+          label="Pick up now"
+          checked={pickupNow}
+          onChange={(now) => {
+            if (!now && at(slot.date, slot.time) <= Date.now()) {
+              setSlot(walkInSlot(state));
+            }
+            setPickupNow(now);
+          }}
+        />
+        {pickupNow ? (
+          <>
+            <p className="micro">
+              Pickup is recorded at the current Eastern time when saved.
+              Availability is checked again before booking.
+            </p>
+            <Choice
+              label="Rental duration"
+              value={slot.duration}
+              onChange={(duration) =>
+                setSlot({ ...slot, duration: duration as Duration })
+              }
+              options={[
+                ['2', '2 hours'],
+                ['4', '4 hours'],
+                ['day', 'Day · until closing'],
+              ]}
+            />
+          </>
+        ) : (
+          <Schedule slot={slot} setSlot={setSlot} />
+        )}
+        <BikePicker
+          state={state}
+          slot={currentSlot}
+          lines={lines}
+          setLines={setLines}
+          allowCurrentMinute={pickupNow}
+        />
+      </section>
+      <section>
+        <h3>Rider details</h3>
+        <Field
+          label="Name"
+          autoComplete="off"
+          placeholder={demoContact.name}
+          value={contact.name}
+          onChange={(e) => setContact({ ...contact, name: e.target.value })}
+          required
+        />
+        <div className="two-col">
+          <Field
+            label="Email"
+            type="email"
+            autoComplete="off"
+            placeholder={demoContact.email}
+            value={contact.email}
+            onChange={(e) => setContact({ ...contact, email: e.target.value })}
+            required
+          />
+          <Field
+            label="Phone"
+            type="tel"
+            autoComplete="off"
+            placeholder={demoContact.phone}
+            value={contact.phone}
+            onChange={(e) => setContact({ ...contact, phone: e.target.value })}
+            required
+          />
+        </div>
+        <TextArea
+          label="Notes · optional"
+          value={contact.notes}
+          onChange={(e) => setContact({ ...contact, notes: e.target.value })}
+        />
+        <p className="micro">
+          Sample policy: arrive at the selected pickup time and return by the
+          displayed return time. This is a demonstration, not a legally reviewed
+          waiver.
+        </p>
+        <Check
+          label="The rider acknowledges the sample rental policy."
+          checked={contact.policy}
+          onChange={(policy) => setContact({ ...contact, policy })}
+        />
+      </section>
+      <Summary
+        state={state}
+        slot={currentSlot}
+        lines={lines}
+        allowCurrentMinute={pickupNow}
+      />
+      <div>
+        <h3>Pay at pickup through DripOS</h3>
+        <p className="micro">
+          Save the walk-in, then use its staff controls to record pickup payment
+          and check out bikes. This demo does not contact DripOS, send emails or
+          take payment.
+        </p>
+        <ErrorBox message={error} />
+        <div className="actions">
+          <button className="button outline" onClick={cancel}>
+            Cancel
+          </button>
+          <button className="button" onClick={save} disabled={!lines.length}>
+            Create walk-in reservation
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 function ReservationRows({

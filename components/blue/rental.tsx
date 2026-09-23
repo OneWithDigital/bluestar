@@ -90,17 +90,24 @@ export function BikePicker({
   lines,
   setLines,
   ignoreId,
+  allowCurrentMinute = false,
 }: {
   state: State;
   slot: Slot;
   lines: Line[];
   setLines: (v: Line[]) => void;
   ignoreId?: string;
+  allowCurrentMinute?: boolean;
 }) {
   let rows: ReturnType<typeof availability> = [],
     error = '';
   try {
-    rows = availability(state, slot, ignoreId);
+    rows = availability(
+      state,
+      slot,
+      ignoreId,
+      allowCurrentMinute ? Math.floor(Date.now() / 60000) * 60000 : Date.now(),
+    );
   } catch (e) {
     error = (e as Error).message;
   }
@@ -188,16 +195,24 @@ export function Summary({
   slot,
   lines,
   booking,
+  allowCurrentMinute = false,
 }: {
   state: State;
   slot: Slot;
   lines: Line[];
   booking?: Booking;
+  allowCurrentMinute?: boolean;
 }) {
   let end = booking?.end || 0;
   if (!booking)
     try {
-      end = slotInterval(state, slot).end;
+      end = slotInterval(
+        state,
+        slot,
+        allowCurrentMinute
+          ? Math.floor(Date.now() / 60000) * 60000
+          : Date.now(),
+      ).end;
     } catch {}
   const total = booking?.total ?? totalFor(state, lines, slot.duration);
   return (

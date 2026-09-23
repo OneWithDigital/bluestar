@@ -18,6 +18,9 @@ import {
   lineQuantity,
   assign,
   demoContact,
+  walkInSlot,
+  slotInterval,
+  createWalkInBooking,
 } from '../lib/demo-model.ts';
 const now = at('2026-09-09', '11:00');
 const make = () => seed(now),
@@ -44,6 +47,122 @@ check('Eastern summer and winter offsets', () => {
     '2026-12-09T15:00:00.000Z',
   );
 });
+check(
+  'walk-ins start today during opening hours and use closing time for short late-day rides',
+  () => {
+    const s = make();
+    const next = walkInSlot(s, now);
+    assert.deepEqual(next, {
+      date: '2026-09-09',
+      time: '11:01',
+      duration: '2',
+    });
+    assert.ok(slotInterval(s, next, now).start > now);
+    const late = at('2026-09-09', '17:00');
+    const lateSlot = walkInSlot(s, late);
+    assert.equal(lateSlot.duration, 'day');
+    assert.equal(
+      slotInterval(s, lateSlot, late).end,
+      at('2026-09-09', '18:00'),
+    );
+  },
+);
+check(
+  'walk-ins respect opening time, closed dates and the Eastern winter clock',
+  () => {
+    const s = make();
+    assert.deepEqual(walkInSlot(s, at('2026-09-09', '08:00')), {
+      date: '2026-09-09',
+      time: '10:00',
+      duration: '2',
+    });
+    s.settings.closures = ['2026-12-10', '2026-12-11'];
+    const closed = at('2026-12-09', '18:00');
+    const next = walkInSlot(s, closed);
+    assert.deepEqual(next, {
+      date: '2026-12-12',
+      time: '10:00',
+      duration: '2',
+    });
+    assert.ok(slotInterval(s, next, closed).start > closed);
+  },
+);
+check(
+  'staff walk-ins start now, share stock, stay unpaid and permit immediate checkout',
+  () => {
+    const s = make();
+    s.paymentMode = 'full';
+    const savedAt = now + 32 * 1000;
+    const b = createWalkInBooking(s, slot, lines, contact, true, savedAt);
+    assert.equal(b.source, 'Walk-in');
+    assert.equal(b.start, now);
+    assert.equal(b.paymentMode, 'pickup');
+    assert.equal(b.paid, 0);
+    assert.equal(count(s, b), 0);
+    assert.throws(
+      () => createWalkInBooking(s, slot, lines, contact, true, savedAt),
+      /no longer available/,
+    );
+    assert.throws(
+      () =>
+        createBooking(
+          s,
+          b,
+          lines,
+          contact,
+          'Website',
+          'pickup',
+          false,
+          savedAt,
+        ),
+      /future pickup/,
+    );
+    assert.throws(
+      () => changeStatus(s, b.id, 'Checked out', savedAt),
+      /payment first/,
+    );
+    recordPayment(s, b.id, b.total, 'Walk-in demo receipt', savedAt);
+    changeStatus(s, b.id, 'Checked out', savedAt);
+    assert.equal(b.status, 'Checked out');
+  },
+);
+check(
+  'walk-ins reject missing details, closures and after-hours pickup without adding a booking',
+  () => {
+    const s = make();
+    const before = s.bookings.length;
+    assert.throws(
+      () =>
+        createWalkInBooking(
+          s,
+          slot,
+          lines,
+          { ...contact, name: '' },
+          true,
+          now,
+        ),
+      /contact details/,
+    );
+    assert.throws(
+      () =>
+        createWalkInBooking(
+          s,
+          slot,
+          lines,
+          contact,
+          true,
+          at('2026-09-09', '19:00'),
+        ),
+      /closing/,
+    );
+    s.settings.closures.push('2026-09-09');
+    assert.throws(
+      () => createWalkInBooking(s, slot, lines, contact, true, now),
+      /closed/,
+    );
+    assert.equal(s.bookings.length, before);
+  },
+);
 check(
   'two matching bikes from one stock group, unpaid confirmation and shared availability',
   () => {

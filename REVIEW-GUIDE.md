@@ -61,7 +61,9 @@ Use the reviewer bar to switch views, preview full payment or a sample 20% booki
 
 ## Validation
 
-September 21 follow-up: see [SITE-REVIEW-2026-09-21.md](SITE-REVIEW-2026-09-21.md) for the current review, five functional corrections, additional regression tests, and prioritized ideas. The current model suite has 25 checks. Editable source and setup instructions are in the private [GitHub repository](https://github.com/OneWithDigital/bluestar).
+September 21 follow-up: see [SITE-REVIEW-2026-09-21.md](SITE-REVIEW-2026-09-21.md) for the review, five functional corrections, additional regression tests, and prioritized ideas. The current model suite has 29 checks. Editable source and setup instructions are in the private [GitHub repository](https://github.com/OneWithDigital/bluestar).
+
+September 23: **Add a walk-in** now opens a staff booking form on both Today and Reservations. Staff can pick up now during opening hours or choose a scheduled time, select multiple matching bikes, enter fictional rider details, and save without leaving the dashboard. The new record opens in staff with source **Walk-in** and pay-at-pickup selected; record simulated payment before checking out. **Today's pickups & active rentals** lists today's confirmed pickups and every checked-out rental, including overdue returns. These bookings use the same session inventory as the customer and partner views.
 
 The Hostinger deployment was verified on September 9, 2026 (Eastern): the separate static build and TypeScript check passed, all 21 model checks passed, and all five routes served the new application over validated HTTPS. A live two-bike booking confirmed the correct unpaid pickup balance and appeared in staff with matching quantities and details. The Hostinger homepage had no horizontal overflow at 390px; all images loaded and the intended fonts were applied. Test data was reset afterward. See HOSTINGER-DEPLOYMENT.md for the build and deployment details.
 
